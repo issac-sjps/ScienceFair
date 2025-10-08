@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>語音轉文字範例</title>
+</head>
+<body>
+    <h1>語音轉文字範例</h1>
+    <button id="startBtn">開始錄音</button>
+    <p id="output">請開始說話...</p>
+
+    <script>
+        const startBtn = document.getElementById('startBtn');
+        const output = document.getElementById('output');
+
+        // 檢查瀏覽器是否支援 SpeechRecognition
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            output.textContent = '您的瀏覽器不支援語音辨識功能。';
+        } else {
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'zh-TW'; // 設定語言為中文（台灣）
+
+            recognition.onstart = () => {
+                output.textContent = '正在聆聽...';
+            };
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                output.textContent = `您說了：${transcript}`;
+            };
+
+            recognition.onerror = (event) => {
+                output.textContent = `發生錯誤：${event.error}`;
+            };
+
+            startBtn.addEventListener('click', () => {
+                recognition.start();
+            });
+        }
+    </script>
+</body>
+</html>
