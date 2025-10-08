@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>口說比對練習 — Demo</title>
+  <style>
+    :root{--bg:#0f172a;--card:#0b1220;--muted:#9aa4b2;--accent:#4f46e5;--ok:#16a34a;--bad:#ef4444}
+    *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans TC',Arial}
+    body{margin:0;background:linear-gradient(180deg,#071128 0%, #06172a 100%);color:#e6eef8;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+    .wrap{width:100%;max-width:980px}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+    header h1{margin:0;font-size:20px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));border-radius:12px;padding:16px;box-shadow:0 6px 20px rgba(2,6,23,0.6)}
+    .controls{display:flex;gap:8px;flex-wrap:wrap}
+    button{background:var(--accent);border:0;color:white;padding:10px 12px;border-radius:8px;cursor:pointer;font-weight:600}
+    button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06)}
+    .question-area{display:grid;grid-template-columns:1fr 300px;gap:12px;margin-top:12px}
+    .panel{padding:12px;border-radius:10px;background:rgba(255,255,255,0.01)}
+    .qtext{font-size:20px;margin-bottom:8px}
+    .meta{color:var(--muted);font-size:13px}
+    .rec-btn{background:linear-gradient(90deg,#ef4444,#f97316);padding:12px;border-radius:999px;border:0;color:white}
+    .transcript{background:#031124;padding:10px;border-radius:8px;min-height:56px}
+    .result{margin-top:10px;padding:10px;border-radius:8px;background:rgba(255,255,255,0.02)}
+    .diff-word.ok{background:rgba(34,197,94,0.12);color:var(--ok);padding:2px 6px;border-radius:6px}
+    .diff-word.bad{background:rgba(239,68,68,0.07);color:var(--bad);padding:2px 6px;border-radius:6px}
+    label{display:block;font-size:13px;color:var(--muted);margin-top:10px}
+    input[type=range]{width:100%}
+    .q-list{max-height:220px;overflow:auto;margin-top:8px}
+    .q-item{display:flex;justify-content:space-between;align-items:center;padding:8px;border-radius:8px}
+    .q-item + .q-item{margin-top:6px}
+    .small{font-size:13px;color:var(--muted)}
+    footer{margin-top:12px;color:var(--muted);font-size:13px}
+    .flex{display:flex;gap:8px;align-items:center}
+    .score{font-weight:700;font-size:18px}
+    .settings{display:flex;gap:8px;align-items:center}
+    textarea{width:100%;height:120px;background:#031124;border-radius:8px;padding:8px;border:1px solid rgba(255,255,255,0.03);color:inherit}
+    .muted{color:var(--muted)}
+    .right{text-align:right}
+    @media(max-width:900px){.question-area{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="card" style="padding:10px 14px;display:flex;align-items:center;gap:12px">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 1v11" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 13a7 7 0 1 1-14 0V6a7 7 0 0 1 14 0v7z" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div>
+          <h1>口說比對練習（離線單檔）</h1>
+          <div class="meta">使用 Web Speech API 做語音辨識，比對文字並顯示差異</div>
+        </div>
+      </div>
+    </header>
+
+    <section class="card">
+      <div class="controls">
+        <button id="playRef" class="ghost">播放範例語音</button>
+        <button id="rec" class="rec-btn">按住說話</button>
+        <button id="next">下一題</button>
+        <button id="exportCSV" class="ghost">匯出成績(CSV)</button>
+        <button id="importJSON" class="ghost">匯入題庫(JSON)</button>
+        <input id="fileInput" type="file" accept="application/json" style="display:none">
+        <div style="margin-left:auto" class="settings">
+          <label class="small">容錯閾值：<span id="thLabel">80%</span></label>
+          <input id="threshold" type="range" min="40" max="100" value="80">
+        </div>
+      </div>
+
+      <div class="question-area">
+        <div class="panel">
+          <div class="qtext" id="qText">載入題目中...</div>
+          <div class="meta">題號 <span id="qIdx">0</span> / <span id="qTotal">0</span></div>
+
+          <div style="margin-top:12px">
+            <div class="muted">標準答案：</div>
+            <div style="margin-top:6px;background:#031124;padding:10px;border-radius:8px" id="refText"></div>
+          </div>
+
+          <label>你的語音轉文字結果：</label>
+          <div class="transcript" id="transcript">（尚未錄音）</div>
+
+          <div class="result" id="resultArea" style="display:none">
+            <div class="flex"><div>相似度：</div><div class="score" id="scorePct">0%</div></div>
+            <div style="margin-top:8px">比對結果：</div>
+            <div style="margin-top:6px" id="diffArea"></div>
+          </div>
+
+          <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+            <button id="addReview" class="ghost">標記為需補救</button>
+            <div class="muted">已標記數：<span id="reviewCount">0</span></div>
+          </div>
+        </div>
+
+        <aside class="panel">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <strong>題庫</strong>
+            <div class="small muted">可編輯或匯入/匯出</div>
+          </div>
+
+          <div style="margin-top:8px">
+            <textarea id="qaJson"></textarea>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button id="loadJson" class="ghost">套用題庫</button>
+              <button id="saveLocal" class="ghost">儲存題庫到 localStorage</button>
+              <button id="resetDefault" class="ghost">還原範例題庫</button>
+            </div>
+          </div>
+
+          <label class="small">答對條件</label>
+          <div class="small muted">若相似度 >= 容錯閾值 → 判定為正確</div>
+
+          <div class="q-list" id="qList"></div>
+
+          <div style="margin-top:8px;display:flex;gap:8px;align-items:center;justify-content:space-between">
+            <div class="muted">總成績：<span id="overall">0 / 0</span></div>
+            <div class="muted">正確率：<span id="overallPct">0%</span></div>
+          </div>
+        </aside>
+      </div>
+
+      <footer>
+        注意：本頁面使用瀏覽器內建的語音辨識 (Web Speech API)。建議使用 Chrome / Edge，並允許麥克風權限。離線功能有限，最佳體驗需網路連線。
+      </footer>
+    </section>
+  </div>
+
+  <script>
+    // -- Default question set (editable)
+    const defaultQA = [
+      {id:1, prompt: '請說：Hello, how are you today?', answer: 'Hello, how are you today?'} ,
+      {id:2, prompt: '請說：What is your name?', answer: 'What is your name?'} ,
+      {id:3, prompt: '請說：I like to play basketball after school.', answer: 'I like to play basketball after school.'} ,
+      {id:4, prompt: '請說：The weather is very nice today.', answer: 'The weather is very nice today.'} ,
+      {id:5, prompt: '請說：Can I have a cup of tea, please?', answer: 'Can I have a cup of tea, please?'}
+    ];
+
+    // -- State
+    let qa = [];
+    let idx = 0;
+    let results = []; // {idx, transcript, score, correct}
+    let reviewMarked = new Set();
+
+    // -- DOM
+    const qText = document.getElementById('qText');
+    const qIdx = document.getElementById('qIdx');
+    const qTotal = document.getElementById('qTotal');
+    const refText = document.getElementById('refText');
+    const transcriptEl = document.getElementById('transcript');
+    const diffArea = document.getElementById('diffArea');
+    const scorePct = document.getElementById('scorePct');
+    const resultArea = document.getElementById('resultArea');
+    const qList = document.getElementById('qList');
+    const qaJson = document.getElementById('qaJson');
+    const threshold = document.getElementById('threshold');
+    const thLabel = document.getElementById('thLabel');
+    const overall = document.getElementById('overall');
+    const overallPct = document.getElementById('overallPct');
+    const reviewCount = document.getElementById('reviewCount');
+
+    // -- SpeechRecognition setup
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null;
+    if (SpeechRecognition){
+      recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+    }
+
+    // -- Utilities: simple Levenshtein distance
+    function levenshtein(a,b){
+      a = a || '';
+      b = b || '';
+      const M = a.length, N = b.length;
+      const dp = Array.from({length:M+1}, ()=>new Array(N+1).fill(0));
+      for(let i=0;i<=M;i++) dp[i][0]=i;
+      for(let j=0;j<=N;j++) dp[0][j]=j;
+      for(let i=1;i<=M;i++){
+        for(let j=1;j<=N;j++){
+          const cost = a[i-1]===b[j-1]?0:1;
+          dp[i][j]=Math.min(dp[i-1][j]+1, dp[i][j-1]+1, dp[i-1][j-1]+cost);
+        }
+      }
+      return dp[M][N];
+    }
+
+    function similarity(a,b){
+      a = (a||'').trim(); b=(b||'').trim();
+      if(a.length===0 && b.length===0) return 100;
+      if(a.length===0 || b.length===0) return 0;
+      const dist = levenshtein(a.toLowerCase(), b.toLowerCase());
+      const maxLen = Math.max(a.length, b.length);
+      const sim = Math.max(0, Math.round((1 - dist / maxLen) * 100));
+      return sim;
+    }
+
+    function tokenize(text){
+      return (text||'').split(/\s+/).filter(Boolean).map(t=>t.replace(/[.,!?]/g,'').toLowerCase());
+    }
+
+    function diffHighlight(ref, actual){
+      // token-level comparison simple heuristic: mark words present/missing
+      const r = tokenize(ref);
+      const a = tokenize(actual);
+      const out = [];
+      for(let i=0;i<r.length;i++){
+        const rw = r[i];
+        const found = a.includes(rw);
+        out.push(`<span class="diff-word ${found? 'ok':'bad'}">${escapeHtml(r[i])}</span>`);
+      }
+      // show extra words in actual that are not in ref
+      const extras = a.filter(w=>!r.includes(w));
+      if(extras.length) out.push('<div style="margin-top:8px"><strong>額外詞：</strong>' + extras.map(w=>`<span class="diff-word bad">${escapeHtml(w)}</span>`).join(' ') + '</div>');
+      return out.join(' ');
+    }
+
+    function escapeHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+    // -- UI actions
+    function renderQuestion(){
+      if(qa.length===0){ qText.textContent='無題庫'; qIdx.textContent=0; qTotal.textContent=0; return; }
+      const item = qa[idx];
+      qText.textContent = item.prompt || ('Question ' + (idx+1));
+      qIdx.textContent = (idx+1);
+      qTotal.textContent = qa.length;
+      refText.textContent = item.answer;
+      transcriptEl.textContent = '（尚未錄音）';
+      resultArea.style.display='none';
+      renderList();
+    }
+
+    function renderList(){
+      qList.innerHTML='';
+      qa.forEach((it,i)=>{
+        const div = document.createElement('div');
+        div.className='q-item';
+        div.innerHTML = `<div style="flex:1"><strong>${i+1}. </strong><span class="muted">${escapeHtml(it.prompt)}</span></div><div class="right"><button data-i="${i}" class="ghost btn-jump">跳到此題</button></div>`;
+        qList.appendChild(div);
+      });
+      document.querySelectorAll('.btn-jump').forEach(b=>b.addEventListener('click', e=>{ idx = parseInt(b.dataset.i); renderQuestion();}));
+    }
+
+    // -- Load / save QA
+    function loadDefault(){ qa = JSON.parse(JSON.stringify(defaultQA)); qaJson.value = JSON.stringify(qa, null, 2); idx = 0; results=[]; reviewMarked.clear(); updateReviewCount(); renderQuestion(); updateOverall(); }
+
+    function applyJson(){
+      try{
+        const parsed = JSON.parse(qaJson.value);
+        if(!Array.isArray(parsed)) throw new Error('JSON 必須為陣列');
+        qa = parsed.map((it,i)=>({id: it.id ?? (i+1), prompt: it.prompt ?? (it.answer ?? 'Question'), answer: it.answer ?? ''}));
+        idx = 0; results=[]; reviewMarked.clear(); updateReviewCount(); renderQuestion(); updateOverall();
+        alert('題庫套用完成');
+      }catch(err){ alert('JSON 解析錯誤: '+err.message);}    
+    }
+
+    function saveLocal(){ localStorage.setItem('speaking_qa', qaJson.value); alert('已儲存到 localStorage'); }
+    function loadLocalIfAny(){ const s = localStorage.getItem('speaking_qa'); if(s){ qaJson.value = s; try{ qa = JSON.parse(s); if(Array.isArray(qa)){ qa = qa.map((it,i)=>({id: it.id ?? (i+1), prompt: it.prompt ?? (it.answer ?? 'Question'), answer: it.answer ?? ''})); } }catch(e){ console.warn(e);} }
+    }
+
+    // -- Recording behaviour
+    const recBtn = document.getElementById('rec');
+    if(!recognition){ recBtn.disabled=true; recBtn.textContent='此瀏覽器不支援語音辨識'; recBtn.style.opacity=0.6; }
+    else{
+      recBtn.addEventListener('mousedown', startRec);
+      recBtn.addEventListener('touchstart', startRec);
+      recBtn.addEventListener('mouseup', stopRec);
+      recBtn.addEventListener('mouseleave', stopRec);
+      recBtn.addEventListener('touchend', stopRec);
+
+      recognition.addEventListener('result', e=>{
+        const txt = e.results[0][0].transcript;
+        handleTranscript(txt);
+      });
+      recognition.addEventListener('error', e=>{
+        console.error('recognition error', e); alert('語音辨識發生錯誤: '+e.error);
+      });
+    }
+
+    function startRec(){
+      if(!recognition) return;
+      recognition.lang = 'en-US';
+      try{ recognition.start(); recBtn.textContent='錄音中...放開停止'; }
+      catch(e){ console.warn(e); }
+    }
+    function stopRec(){ if(!recognition) return; recognition.stop(); recBtn.textContent='按住說話'; }
+
+    function handleTranscript(txt){
+      transcriptEl.textContent = txt;
+      const ref = qa[idx].answer || '';
+      const sim = similarity(txt, ref);
+      scorePct.textContent = sim + '%';
+      diffArea.innerHTML = diffHighlight(ref, txt);
+      resultArea.style.display='block';
+
+      const pass = sim >= parseInt(threshold.value);
+      results[idx] = {idx, transcript: txt, score: sim, correct: !!pass};
+      updateOverall();
+    }
+
+    // -- Next
+    document.getElementById('next').addEventListener('click', ()=>{
+      if(idx < qa.length-1) idx++; else idx = 0;
+      renderQuestion();
+    });
+
+    // -- Play reference (use SpeechSynthesis)
+    document.getElementById('playRef').addEventListener('click', ()=>{
+      const text = qa[idx].answer || qa[idx].prompt || '';
+      if(!('speechSynthesis' in window)){ alert('此瀏覽器不支援語音合成'); return; }
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'en-US';
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
+    });
+
+    // -- threshold UI
+    threshold.addEventListener('input', ()=>{ thLabel.textContent = threshold.value + '%'; });
+
+    // -- review marking
+    document.getElementById('addReview').addEventListener('click', ()=>{
+      reviewMarked.add(idx);
+      updateReviewCount();
+      alert('已標記為需補救');
+    });
+    function updateReviewCount(){ reviewCount.textContent = reviewMarked.size; }
+
+    // -- overall
+    function updateOverall(){
+      const total = qa.length;
+      const done = results.filter(r=>r!==undefined).length;
+      const correct = results.filter(r=>r && r.correct).length;
+      overall.textContent = `${correct} / ${total}`;
+      overallPct.textContent = total===0? '0%' : Math.round((correct/total)*100) + '%';
+    }
+
+    // -- export CSV (results)
+    document.getElementById('exportCSV').addEventListener('click', ()=>{
+      const rows = [['index','prompt','answer','transcript','score','correct']];
+      qa.forEach((q,i)=>{
+        const r = results[i] || {transcript:'',score:0,correct:false};
+        rows.push([i+1, q.prompt.replace(/\n/g,' '), q.answer.replace(/\n/g,' '), r.transcript||'', r.score||0, r.correct? 'YES':'NO']);
+      });
+      const csv = rows.map(r => r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv], {type:'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'speaking_results.csv'; a.click(); URL.revokeObjectURL(url);
+    });
+
+    // -- import JSON
+    document.getElementById('importJSON').addEventListener('click', ()=>{ document.getElementById('fileInput').click(); });
+    document.getElementById('fileInput').addEventListener('change', e=>{
+      const f = e.target.files[0]; if(!f) return; const r = new FileReader(); r.onload = ev=>{
+        try{ const parsed = JSON.parse(ev.target.result); qaJson.value = JSON.stringify(parsed, null, 2); alert('已載入 JSON 到題庫編輯區，請按「套用題庫」套用'); }catch(err){ alert('JSON 解析錯誤: '+err.message); }
+      }; r.readAsText(f);
+    });
+
+    // -- QA editing buttons
+    document.getElementById('loadJson').addEventListener('click', applyJson);
+    document.getElementById('saveLocal').addEventListener('click', saveLocal);
+    document.getElementById('resetDefault').addEventListener('click', ()=>{ if(!confirm('確定要還原範例題庫？目前編輯內容會被覆蓋。')) return; qaJson.value = JSON.stringify(defaultQA, null, 2); applyJson(); });
+
+    // -- init
+    function init(){
+      qaJson.value = JSON.stringify(defaultQA, null, 2);
+      loadLocalIfAny();
+      try{ const parsed = JSON.parse(qaJson.value); if(Array.isArray(parsed)) qa = parsed.map((it,i)=>({id: it.id ?? (i+1), prompt: it.prompt ?? (it.answer ?? 'Question'), answer: it.answer ?? ''})); else qa = defaultQA; }catch(e){ qa = defaultQA; }
+      renderQuestion();
+      updateOverall();
+    }
+    init();
+  </script>
+</body>
+</html>
