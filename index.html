@@ -258,9 +258,8 @@
     }
 
     // -- Recording behaviour
-    // -- Recording behaviour
 const recBtn = document.getElementById('rec');
-let isRecording = false; // 錄音狀態判斷
+let isRecording = false;
 
 if(!recognition){ 
   recBtn.disabled = true; 
@@ -271,24 +270,28 @@ if(!recognition){
     if(!isRecording){
       // 開始錄音
       recognition.lang = 'en-US';
-      try { recognition.start(); }
-      catch(e){ console.warn(e); }
+      recognition.start();
       recBtn.textContent = '錄音中...再按一次停止';
       isRecording = true;
     } else {
-      // 停止錄音
+      // 停止錄音，這裡不要立刻修改按鈕文字
       recognition.stop();
-      recBtn.textContent = '按下說話';
-      isRecording = false;
     }
+  });
+
+  recognition.addEventListener('start', ()=>{
+    isRecording = true;
+  });
+
+  recognition.addEventListener('end', ()=>{
+    // 錄音自然結束或 stop() 後觸發
+    recBtn.textContent = '按下說話';
+    isRecording = false;
   });
 
   recognition.addEventListener('result', e=>{
     const txt = e.results[0][0].transcript;
     handleTranscript(txt);
-    // 停止錄音後重置按鈕
-    recBtn.textContent = '按下說話';
-    isRecording = false;
   });
 
   recognition.addEventListener('error', e=>{
