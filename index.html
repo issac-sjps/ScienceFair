@@ -186,13 +186,27 @@
     function tokenize(text){ return (text||'').split(/\s+/).filter(Boolean).map(t=>t.replace(/[.,!?]/g,'').toLowerCase()); }
 
     function diffHighlight(ref, actual){
-      const r=tokenize(ref), a=tokenize(actual);
-      const out=[];
-      for(let i=0;i<r.length;i++){ const rw=r[i], found=a.includes(rw); out.push(`<span class="diff-word ${found?'ok':'bad'}">${escapeHtml(r[i])}</span>`);}
-      const extras=a.filter(w=>!r.includes(w));
-      if(extras.length) out.push('<div style="margin-top:8px"><strong>額外詞：</strong>' + extras.map(w=>`<span class="diff-word bad">${escapeHtml(w)}</span>`).join(' ') + '</div>');
-      return out.join(' ');
-    }
+  const r=tokenize(ref), a=tokenize(actual);
+  const out=[];
+  for(let i=0;i<r.length;i++){
+    const rw=r[i];
+    const found=a.includes(rw);
+    out.push(`<span class="diff-word ${found?'ok':'bad'}" onclick="speakWord('${rw.replace(/'/g,"\\'")}')">${escapeHtml(rw)}</span>`);
+  }
+  const extras=a.filter(w=>!r.includes(w));
+  if(extras.length) out.push('<div style="margin-top:8px"><strong>額外詞：</strong>' + extras.map(w=>`<span class="diff-word bad" onclick="speakWord('${w.replace(/'/g,"\\'")}')">${escapeHtml(w)}</span>`).join(' ') + '</div>');
+  return out.join(' ');
+}
+
+// 全域 function，點擊單字就會朗讀
+function speakWord(word){
+  if(!('speechSynthesis' in window)) return;
+  const u = new SpeechSynthesisUtterance(word);
+  u.lang='en-US';
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(u);
+}
+
 
     function escapeHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
