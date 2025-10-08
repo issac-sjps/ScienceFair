@@ -258,44 +258,47 @@
     }
 
     // -- Recording behaviour
-    const recBtn = document.getElementById('rec');
-    if(!recognition){ recBtn.disabled=true; recBtn.textContent='此瀏覽器不支援語音辨識'; recBtn.style.opacity=0.6; }
-    else{
-      recBtn.addEventListener('mousedown', startRec);
-      recBtn.addEventListener('touchstart', startRec);
-      recBtn.addEventListener('mouseup', stopRec);
-      recBtn.addEventListener('mouseleave', stopRec);
-      recBtn.addEventListener('touchend', stopRec);
+    // -- Recording behaviour
+const recBtn = document.getElementById('rec');
+let isRecording = false; // 錄音狀態判斷
 
-      recognition.addEventListener('result', e=>{
-        const txt = e.results[0][0].transcript;
-        handleTranscript(txt);
-      });
-      recognition.addEventListener('error', e=>{
-        console.error('recognition error', e); alert('語音辨識發生錯誤: '+e.error);
-      });
-    }
-
-    function startRec(){
-      if(!recognition) return;
+if(!recognition){ 
+  recBtn.disabled = true; 
+  recBtn.textContent = '此瀏覽器不支援語音辨識'; 
+  recBtn.style.opacity = 0.6; 
+} else {
+  recBtn.addEventListener('click', ()=> {
+    if(!isRecording){
+      // 開始錄音
       recognition.lang = 'en-US';
-      try{ recognition.start(); recBtn.textContent='錄音中...放開停止'; }
+      try { recognition.start(); }
       catch(e){ console.warn(e); }
+      recBtn.textContent = '錄音中...再按一次停止';
+      isRecording = true;
+    } else {
+      // 停止錄音
+      recognition.stop();
+      recBtn.textContent = '按下說話';
+      isRecording = false;
     }
-    function stopRec(){ if(!recognition) return; recognition.stop(); recBtn.textContent='按住說話'; }
+  });
 
-    function handleTranscript(txt){
-      transcriptEl.textContent = txt;
-      const ref = qa[idx].answer || '';
-      const sim = similarity(txt, ref);
-      scorePct.textContent = sim + '%';
-      diffArea.innerHTML = diffHighlight(ref, txt);
-      resultArea.style.display='block';
+  recognition.addEventListener('result', e=>{
+    const txt = e.results[0][0].transcript;
+    handleTranscript(txt);
+    // 停止錄音後重置按鈕
+    recBtn.textContent = '按下說話';
+    isRecording = false;
+  });
 
-      const pass = sim >= parseInt(threshold.value);
-      results[idx] = {idx, transcript: txt, score: sim, correct: !!pass};
-      updateOverall();
-    }
+  recognition.addEventListener('error', e=>{
+    console.error('recognition error', e); 
+    alert('語音辨識發生錯誤: '+e.error);
+    recBtn.textContent = '按下說話';
+    isRecording = false;
+  });
+}
+
 
     // -- Next
     document.getElementById('next').addEventListener('click', ()=>{
