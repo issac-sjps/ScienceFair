@@ -56,6 +56,7 @@
       <div class="controls">
         <button id="playRef" class="ghost">播放範例語音</button>
         <button id="rec" class="rec-btn">按下說話</button>
+		<button id="prev">上一題</button>
         <button id="next">下一題</button>
         <button id="exportCSV" class="ghost">匯出成績(CSV)</button>
         <button id="importJSON" class="ghost">匯入題庫(JSON)</button>
@@ -358,6 +359,12 @@ function speakWord(word){
       try{ const parsed=JSON.parse(qaJson.value); if(Array.isArray(parsed)) qa=parsed.map((it,i)=>({id:it.id??(i+1),prompt:it.prompt??(it.answer??'Question'),answer:it.answer??''})); else qa=defaultQA; }catch(e){ qa=defaultQA; }
       renderQuestion(); updateOverall();
     }
+	
+	document.getElementById('prev').addEventListener('click', () => {
+	  idx = idx > 0 ? idx - 1 : qa.length - 1; // 若在第一題，跳到最後一題
+	  renderQuestion();
+	});
+	
     init();
   </script>
 </body>
