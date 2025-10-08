@@ -55,7 +55,7 @@
     <section class="card">
       <div class="controls">
         <button id="playRef" class="ghost">播放範例語音</button>
-        <button id="rec" class="rec-btn">按住說話</button>
+        <button id="rec" class="rec-btn">按下說話</button>
         <button id="next">下一題</button>
         <button id="exportCSV" class="ghost">匯出成績(CSV)</button>
         <button id="importJSON" class="ghost">匯入題庫(JSON)</button>
@@ -125,7 +125,6 @@
   </div>
 
   <script>
-    // -- Default question set (editable)
     const defaultQA = [
       {id:1, prompt: '請說：Hello, how are you today?', answer: 'Hello, how are you today?'} ,
       {id:2, prompt: '請說：What is your name?', answer: 'What is your name?'} ,
@@ -134,13 +133,8 @@
       {id:5, prompt: '請說：Can I have a cup of tea, please?', answer: 'Can I have a cup of tea, please?'}
     ];
 
-    // -- State
-    let qa = [];
-    let idx = 0;
-    let results = []; // {idx, transcript, score, correct}
-    let reviewMarked = new Set();
+    let qa=[], idx=0, results=[], reviewMarked=new Set();
 
-    // -- DOM
     const qText = document.getElementById('qText');
     const qIdx = document.getElementById('qIdx');
     const qTotal = document.getElementById('qTotal');
@@ -157,74 +151,54 @@
     const overallPct = document.getElementById('overallPct');
     const reviewCount = document.getElementById('reviewCount');
 
-    // -- SpeechRecognition setup
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     let recognition = null;
-    if (SpeechRecognition){
-      recognition = new SpeechRecognition();
-      recognition.lang = 'en-US';
-      recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
-    }
+    if(SpeechRecognition){ recognition = new SpeechRecognition(); recognition.lang='en-US'; recognition.interimResults=false; recognition.maxAlternatives=1; }
 
-    // -- Utilities: simple Levenshtein distance
     function levenshtein(a,b){
-      a = a || '';
-      b = b || '';
-      const M = a.length, N = b.length;
-      const dp = Array.from({length:M+1}, ()=>new Array(N+1).fill(0));
+      a=a||''; b=b||''; const M=a.length,N=b.length;
+      const dp=Array.from({length:M+1},()=>new Array(N+1).fill(0));
       for(let i=0;i<=M;i++) dp[i][0]=i;
       for(let j=0;j<=N;j++) dp[0][j]=j;
       for(let i=1;i<=M;i++){
         for(let j=1;j<=N;j++){
-          const cost = a[i-1]===b[j-1]?0:1;
-          dp[i][j]=Math.min(dp[i-1][j]+1, dp[i][j-1]+1, dp[i-1][j-1]+cost);
+          const cost=a[i-1]===b[j-1]?0:1;
+          dp[i][j]=Math.min(dp[i-1][j]+1,dp[i][j-1]+1,dp[i-1][j-1]+cost);
         }
       }
       return dp[M][N];
     }
 
     function similarity(a,b){
-      a = (a||'').trim(); b=(b||'').trim();
+      a=(a||'').trim(); b=(b||'').trim();
       if(a.length===0 && b.length===0) return 100;
       if(a.length===0 || b.length===0) return 0;
       const dist = levenshtein(a.toLowerCase(), b.toLowerCase());
       const maxLen = Math.max(a.length, b.length);
-      const sim = Math.max(0, Math.round((1 - dist / maxLen) * 100));
-      return sim;
+      return Math.max(0, Math.round((1 - dist/maxLen)*100));
     }
 
-    function tokenize(text){
-      return (text||'').split(/\s+/).filter(Boolean).map(t=>t.replace(/[.,!?]/g,'').toLowerCase());
-    }
+    function tokenize(text){ return (text||'').split(/\s+/).filter(Boolean).map(t=>t.replace(/[.,!?]/g,'').toLowerCase()); }
 
     function diffHighlight(ref, actual){
-      // token-level comparison simple heuristic: mark words present/missing
-      const r = tokenize(ref);
-      const a = tokenize(actual);
-      const out = [];
-      for(let i=0;i<r.length;i++){
-        const rw = r[i];
-        const found = a.includes(rw);
-        out.push(`<span class="diff-word ${found? 'ok':'bad'}">${escapeHtml(r[i])}</span>`);
-      }
-      // show extra words in actual that are not in ref
-      const extras = a.filter(w=>!r.includes(w));
+      const r=tokenize(ref), a=tokenize(actual);
+      const out=[];
+      for(let i=0;i<r.length;i++){ const rw=r[i], found=a.includes(rw); out.push(`<span class="diff-word ${found?'ok':'bad'}">${escapeHtml(r[i])}</span>`);}
+      const extras=a.filter(w=>!r.includes(w));
       if(extras.length) out.push('<div style="margin-top:8px"><strong>額外詞：</strong>' + extras.map(w=>`<span class="diff-word bad">${escapeHtml(w)}</span>`).join(' ') + '</div>');
       return out.join(' ');
     }
 
     function escapeHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
-    // -- UI actions
     function renderQuestion(){
       if(qa.length===0){ qText.textContent='無題庫'; qIdx.textContent=0; qTotal.textContent=0; return; }
-      const item = qa[idx];
-      qText.textContent = item.prompt || ('Question ' + (idx+1));
-      qIdx.textContent = (idx+1);
-      qTotal.textContent = qa.length;
-      refText.textContent = item.answer;
-      transcriptEl.textContent = '（尚未錄音）';
+      const item=qa[idx];
+      qText.textContent=item.prompt||('Question '+(idx+1));
+      qIdx.textContent=idx+1;
+      qTotal.textContent=qa.length;
+      refText.textContent=item.answer;
+      transcriptEl.textContent='（尚未錄音）';
       resultArea.style.display='none';
       renderList();
     }
@@ -232,146 +206,129 @@
     function renderList(){
       qList.innerHTML='';
       qa.forEach((it,i)=>{
-        const div = document.createElement('div');
+        const div=document.createElement('div');
         div.className='q-item';
-        div.innerHTML = `<div style="flex:1"><strong>${i+1}. </strong><span class="muted">${escapeHtml(it.prompt)}</span></div><div class="right"><button data-i="${i}" class="ghost btn-jump">跳到此題</button></div>`;
+        div.innerHTML=`<div style="flex:1"><strong>${i+1}. </strong><span class="muted">${escapeHtml(it.prompt)}</span></div><div class="right"><button data-i="${i}" class="ghost btn-jump">跳到此題</button></div>`;
         qList.appendChild(div);
       });
-      document.querySelectorAll('.btn-jump').forEach(b=>b.addEventListener('click', e=>{ idx = parseInt(b.dataset.i); renderQuestion();}));
+      document.querySelectorAll('.btn-jump').forEach(b=>b.addEventListener('click', e=>{ idx=parseInt(b.dataset.i); renderQuestion();}));
     }
 
-    // -- Load / save QA
-    function loadDefault(){ qa = JSON.parse(JSON.stringify(defaultQA)); qaJson.value = JSON.stringify(qa, null, 2); idx = 0; results=[]; reviewMarked.clear(); updateReviewCount(); renderQuestion(); updateOverall(); }
+    function loadDefault(){ qa=JSON.parse(JSON.stringify(defaultQA)); qaJson.value=JSON.stringify(qa,null,2); idx=0; results=[]; reviewMarked.clear(); updateReviewCount(); renderQuestion(); updateOverall(); }
 
     function applyJson(){
       try{
-        const parsed = JSON.parse(qaJson.value);
+        const parsed=JSON.parse(qaJson.value);
         if(!Array.isArray(parsed)) throw new Error('JSON 必須為陣列');
-        qa = parsed.map((it,i)=>({id: it.id ?? (i+1), prompt: it.prompt ?? (it.answer ?? 'Question'), answer: it.answer ?? ''}));
-        idx = 0; results=[]; reviewMarked.clear(); updateReviewCount(); renderQuestion(); updateOverall();
+        qa=parsed.map((it,i)=>({id:it.id??(i+1),prompt:it.prompt??(it.answer??'Question'),answer:it.answer??''}));
+        idx=0; results=[]; reviewMarked.clear(); updateReviewCount(); renderQuestion(); updateOverall();
         alert('題庫套用完成');
-      }catch(err){ alert('JSON 解析錯誤: '+err.message);}    
+      }catch(err){ alert('JSON 解析錯誤: '+err.message);}
     }
 
     function saveLocal(){ localStorage.setItem('speaking_qa', qaJson.value); alert('已儲存到 localStorage'); }
-    function loadLocalIfAny(){ const s = localStorage.getItem('speaking_qa'); if(s){ qaJson.value = s; try{ qa = JSON.parse(s); if(Array.isArray(qa)){ qa = qa.map((it,i)=>({id: it.id ?? (i+1), prompt: it.prompt ?? (it.answer ?? 'Question'), answer: it.answer ?? ''})); } }catch(e){ console.warn(e);} }
-    }
+    function loadLocalIfAny(){ const s=localStorage.getItem('speaking_qa'); if(s){ qaJson.value=s; try{ qa=JSON.parse(s); if(Array.isArray(qa)){ qa=qa.map((it,i)=>({id:it.id??(i+1),prompt:it.prompt??(it.answer??'Question'),answer:it.answer??''})); } }catch(e){ console.warn(e);} } }
 
-    // -- Recording behaviour
-const recBtn = document.getElementById('rec');
-let isRecording = false;
+    const recBtn=document.getElementById('rec'); let isRecording=false;
 
-if(!recognition){ 
-  recBtn.disabled = true; 
-  recBtn.textContent = '此瀏覽器不支援語音辨識'; 
-  recBtn.style.opacity = 0.6; 
-} else {
-  recBtn.addEventListener('click', ()=> {
-    if(!isRecording){
-      // 開始錄音
-      recognition.lang = 'en-US';
-      recognition.start();
-      recBtn.textContent = '錄音中...再按一次停止';
-      isRecording = true;
+    if(!recognition){ 
+      recBtn.disabled=true; 
+      recBtn.textContent='此瀏覽器不支援語音辨識'; 
+      recBtn.style.opacity=0.6; 
     } else {
-      // 停止錄音，這裡不要立刻修改按鈕文字
-      recognition.stop();
+      recBtn.addEventListener('click', ()=> {
+        if(!isRecording){
+          recognition.start();
+          recBtn.textContent='錄音中...再按一次停止';
+          isRecording=true;
+        } else {
+          recognition.stop();
+        }
+      });
+
+      recognition.addEventListener('end', ()=>{
+        recBtn.textContent='按下說話';
+        isRecording=false;
+      });
+
+      recognition.addEventListener('result', e=>{
+        const txt=e.results[0][0].transcript;
+        transcriptEl.textContent=txt;
+
+        const ref=qa[idx].answer||'';
+        const sim=similarity(ref,txt);
+        const diffHtml=diffHighlight(ref,txt);
+
+        scorePct.textContent=sim+'%';
+        diffArea.innerHTML=diffHtml;
+        resultArea.style.display='block';
+
+        results[idx]={transcript:txt,score:sim,correct:sim>=parseInt(threshold.value)};
+        updateOverall();
+      });
+
+      recognition.addEventListener('error', e=>{
+        console.error('recognition error', e); 
+        alert('語音辨識發生錯誤: '+e.error);
+        recBtn.textContent='按下說話';
+        isRecording=false;
+      });
     }
-  });
 
-  recognition.addEventListener('start', ()=>{
-    isRecording = true;
-  });
-
-  recognition.addEventListener('end', ()=>{
-    // 錄音自然結束或 stop() 後觸發
-    recBtn.textContent = '按下說話';
-    isRecording = false;
-  });
-
-  recognition.addEventListener('result', e=>{
-    const txt = e.results[0][0].transcript;
-    handleTranscript(txt);
-  });
-
-  recognition.addEventListener('error', e=>{
-    console.error('recognition error', e); 
-    alert('語音辨識發生錯誤: '+e.error);
-    recBtn.textContent = '按下說話';
-    isRecording = false;
-  });
-}
-
-
-    // -- Next
-    document.getElementById('next').addEventListener('click', ()=>{
-      if(idx < qa.length-1) idx++; else idx = 0;
-      renderQuestion();
-    });
-
-    // -- Play reference (use SpeechSynthesis)
+    document.getElementById('next').addEventListener('click', ()=>{ idx=idx<qa.length-1? idx+1:0; renderQuestion(); });
     document.getElementById('playRef').addEventListener('click', ()=>{
-      const text = qa[idx].answer || qa[idx].prompt || '';
+      const text=qa[idx].answer||qa[idx].prompt||'';
       if(!('speechSynthesis' in window)){ alert('此瀏覽器不支援語音合成'); return; }
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = 'en-US';
+      const u=new SpeechSynthesisUtterance(text);
+      u.lang='en-US';
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(u);
     });
 
-    // -- threshold UI
-    threshold.addEventListener('input', ()=>{ thLabel.textContent = threshold.value + '%'; });
+    threshold.addEventListener('input', ()=>{ thLabel.textContent=threshold.value+'%'; });
 
-    // -- review marking
-    document.getElementById('addReview').addEventListener('click', ()=>{
-      reviewMarked.add(idx);
-      updateReviewCount();
-      alert('已標記為需補救');
-    });
-    function updateReviewCount(){ reviewCount.textContent = reviewMarked.size; }
+    document.getElementById('addReview').addEventListener('click', ()=>{ reviewMarked.add(idx); updateReviewCount(); alert('已標記為需補救'); });
+    function updateReviewCount(){ reviewCount.textContent=reviewMarked.size; }
 
-    // -- overall
     function updateOverall(){
-      const total = qa.length;
-      const done = results.filter(r=>r!==undefined).length;
-      const correct = results.filter(r=>r && r.correct).length;
-      overall.textContent = `${correct} / ${total}`;
-      overallPct.textContent = total===0? '0%' : Math.round((correct/total)*100) + '%';
+      const total=qa.length;
+      const done=results.filter(r=>r!==undefined).length;
+      const correct=results.filter(r=>r&&r.correct).length;
+      overall.textContent=`${correct} / ${total}`;
+      overallPct.textContent=total===0? '0%' : Math.round((correct/total)*100)+'%';
     }
 
-    // -- export CSV (results)
     document.getElementById('exportCSV').addEventListener('click', ()=>{
-      const rows = [['index','prompt','answer','transcript','score','correct']];
+      const rows=[['index','prompt','answer','transcript','score','correct']];
       qa.forEach((q,i)=>{
-        const r = results[i] || {transcript:'',score:0,correct:false};
-        rows.push([i+1, q.prompt.replace(/\n/g,' '), q.answer.replace(/\n/g,' '), r.transcript||'', r.score||0, r.correct? 'YES':'NO']);
+        const r=results[i]||{transcript:'',score:0,correct:false};
+        rows.push([i+1,q.prompt.replace(/\n/g,' '),q.answer.replace(/\n/g,' '),r.transcript||'',r.score||0,r.correct?'YES':'NO']);
       });
-      const csv = rows.map(r => r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
-      const blob = new Blob([csv], {type:'text/csv'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = 'speaking_results.csv'; a.click(); URL.revokeObjectURL(url);
+      const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+      const blob=new Blob([csv],{type:'text/csv'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a'); a.href=url; a.download='speaking_results.csv'; a.click(); URL.revokeObjectURL(url);
     });
 
-    // -- import JSON
     document.getElementById('importJSON').addEventListener('click', ()=>{ document.getElementById('fileInput').click(); });
     document.getElementById('fileInput').addEventListener('change', e=>{
-      const f = e.target.files[0]; if(!f) return; const r = new FileReader(); r.onload = ev=>{
-        try{ const parsed = JSON.parse(ev.target.result); qaJson.value = JSON.stringify(parsed, null, 2); alert('已載入 JSON 到題庫編輯區，請按「套用題庫」套用'); }catch(err){ alert('JSON 解析錯誤: '+err.message); }
-      }; r.readAsText(f);
+      const f=e.target.files[0]; if(!f) return;
+      const r=new FileReader();
+      r.onload=ev=>{
+        try{ const parsed=JSON.parse(ev.target.result); qaJson.value=JSON.stringify(parsed,null,2); alert('已載入 JSON 到題庫編輯區，請按「套用題庫」套用'); }catch(err){ alert('JSON 解析錯誤: '+err.message);}
+      };
+      r.readAsText(f);
     });
 
-    // -- QA editing buttons
     document.getElementById('loadJson').addEventListener('click', applyJson);
     document.getElementById('saveLocal').addEventListener('click', saveLocal);
-    document.getElementById('resetDefault').addEventListener('click', ()=>{ if(!confirm('確定要還原範例題庫？目前編輯內容會被覆蓋。')) return; qaJson.value = JSON.stringify(defaultQA, null, 2); applyJson(); });
+    document.getElementById('resetDefault').addEventListener('click', ()=>{ if(!confirm('確定要還原範例題庫？目前編輯內容會被覆蓋。')) return; qaJson.value=JSON.stringify(defaultQA,null,2); applyJson(); });
 
-    // -- init
     function init(){
-      qaJson.value = JSON.stringify(defaultQA, null, 2);
+      qaJson.value=JSON.stringify(defaultQA,null,2);
       loadLocalIfAny();
-      try{ const parsed = JSON.parse(qaJson.value); if(Array.isArray(parsed)) qa = parsed.map((it,i)=>({id: it.id ?? (i+1), prompt: it.prompt ?? (it.answer ?? 'Question'), answer: it.answer ?? ''})); else qa = defaultQA; }catch(e){ qa = defaultQA; }
-      renderQuestion();
-      updateOverall();
+      try{ const parsed=JSON.parse(qaJson.value); if(Array.isArray(parsed)) qa=parsed.map((it,i)=>({id:it.id??(i+1),prompt:it.prompt??(it.answer??'Question'),answer:it.answer??''})); else qa=defaultQA; }catch(e){ qa=defaultQA; }
+      renderQuestion(); updateOverall();
     }
     init();
   </script>
