@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>拼字挑戰 - 黑字按鈕版</title>
+<title>拼字挑戰 - 自動判定版</title>
 <style>
 body{
   margin:0;
@@ -93,7 +93,6 @@ main{
   justify-content:center;
   gap:8px;
 }
-/* 按鈕顏色改橘黃，文字改黑色 */
 button{
   padding:10px 20px;
   margin:4px;
@@ -143,7 +142,7 @@ footer{
 <body>
 
 <div class="header-block">
-<h1>新莊國小-字卡拼字挑戰</h1>
+<h1>新莊國小-拼字挑戰</h1>
 <div class="stats">分數：<span id="score">0</span> | 答對率：<span id="accuracy">0</span>% | 時間：<span id="timer">0</span>s</div>
 <div id="rankBoard">
 <h3>🏆 排行榜</h3>
@@ -157,7 +156,6 @@ footer{
 <div id="answerArea"></div>
 <div class="button-group">
 <button id="startBtn">開始挑戰</button>
-<button id="submitBtn">提交答案</button>
 <button id="nextBtn">下一題</button>
 <div class="line-break"></div>
 <button id="playRef">播放單字</button>
@@ -187,7 +185,6 @@ const letterBank=document.getElementById('letterBank');
 const answerArea=document.getElementById('answerArea');
 const feedback=document.getElementById('feedback');
 const startBtn=document.getElementById('startBtn');
-const submitBtn=document.getElementById('submitBtn');
 const nextBtn=document.getElementById('nextBtn');
 const playRef=document.getElementById('playRef');
 const resetBtn=document.getElementById('resetBtn');
@@ -251,21 +248,29 @@ function renderLetterBank(){
   });
 }
 
-submitBtn.addEventListener('click', ()=>{
-  const userAns=Array.from(answerArea.children).map(d=>d.textContent).join('');
-  const ref=qa[idx].answer.replace(/ /g,'');
+// 下一題自動判定答案
+nextBtn.addEventListener('click', ()=>{
+  const userAns = Array.from(answerArea.children).map(d=>d.textContent).join('').toLowerCase().trim();
+  const ref = qa[idx].answer.replace(/ /g,'').toLowerCase().trim();
   totalCount++;
-  if(userAns===ref){
+  let isCorrect = false;
+
+  if(userAns === ref){
     correctCount++;
-    score+=20;
-    feedback.innerHTML='<div class="result good">✅ 正確！</div>';
+    score += 20;
+    feedback.innerHTML = '<div class="result good">✅ 正確！</div>';
+    isCorrect = true;
   } else {
-    feedback.innerHTML=`<div class="result bad">❌ 錯誤！正確答案: ${qa[idx].answer}</div>`;
+    feedback.innerHTML = `<div class="result bad">❌ 錯誤！正確答案: ${qa[idx].answer}</div>`;
   }
   updateStats();
-});
 
-nextBtn.addEventListener('click', ()=>{
+  // 如果答錯，跳出確認是否繼續下一題
+  if(!isCorrect){
+    const proceed = confirm('答案不正確，是否仍然跳到下一題？');
+    if(!proceed) return; // 停留在這題
+  }
+
   idx++;
   if(idx>=qa.length){
     finishChallenge();
