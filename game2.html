@@ -64,6 +64,7 @@ const items=[
 ];
 
 let idx=0,score=0,startTime=null,timerInt=null,correctCount=0,totalCount=0;
+let recognizing=false;
 const scoreEl=document.getElementById('score');
 const timerEl=document.getElementById('timer');
 const clue=document.getElementById('clue');
@@ -78,13 +79,33 @@ const nextBtn=document.getElementById('nextBtn');
 
 // 語音辨識
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-let recognition=null,recognizing=false;
+let recognition=null;
 
 if(SpeechRecognition){
-    recognition = new SpeechRecognition();
-    recognition.lang = 'en-US';
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
+    recognition=new SpeechRecognition();
+    recognition.lang='en-US';
+    recognition.interimResults=false;
+    recognition.maxAlternatives=1;
+
+    recognition.onresult=(event)=>{
+        const spoken=event.results[0][0].transcript.toLowerCase().replace(/ /g,'');
+        const correct=items[idx].word.toLowerCase().replace(/ /g,'');
+        totalCount++;
+        let isCorrect = false;
+        if(spoken===correct){
+            correctCount++;
+            isCorrect=true;
+            score+=20;
+        }
+        showFeedback(isCorrect);
+        updateAccuracy();
+    }
+
+    recognition.onend=()=>{
+        recognizing=false;
+        speakBtn.textContent='開始說話 🔊';
+    }
+
 }else{
     alert('瀏覽器不支援語音辨識，請使用 Chrome 或 Safari');
 }
@@ -126,27 +147,6 @@ function toggleRecognition(){
         feedback.textContent='🎤 正在辨識...';
     }else{
         recognition.stop();
-        recognizing=false;
-        speakBtn.textContent='開始說話 🔊';
-    }
-}
-
-// 語音辨識結果
-if(recognition){
-    recognition.onresult=(event)=>{
-        const spoken=event.results[0][0].transcript.toLowerCase().replace(/ /g,'');
-        const correct=items[idx].word.toLowerCase().replace(/ /g,'');
-        totalCount++;
-        if(spoken===correct){
-            correctCount++;
-            showFeedback(true);
-        }else{
-            showFeedback(false);
-        }
-        updateAccuracy();
-    }
-    recognition.onerror=(e)=>{
-        feedback.textContent='⚠️ 辨識失敗，請再按開始說話';
     }
 }
 
@@ -197,14 +197,9 @@ toggleRank.addEventListener('click',()=>{rankBoard.classList.toggle('collapsed')
 startBtn.onclick=startGame;
 speakBtn.onclick=toggleRecognition;
 nextBtn.onclick=()=>{
-    // 每題答對加分 20
-    if(totalCount>0){
-        const lastCorrect=(correctCount/totalCount)>=1 ? true : false;
-        if(lastCorrect) score+=20;
-        updateProgress();
-    }
     idx++;
     nextQuestion();
+    updateProgress();
 }
 
 // 初始化排行榜
