@@ -3,26 +3,119 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>口說挑戰 - 限次挑戰版</title>
+<title>口說挑戰 - 置中版</title>
 <style>
-body{margin:0;font-family:'Segoe UI',sans-serif;background:linear-gradient(180deg,#0b1220,#1e1b4b);color:#fff;text-align:center;}
-.header-block{width:100%;padding:16px 24px;background:rgba(255,255,255,0.05);backdrop-filter:blur(8px);}
-.header-block h1{margin:0 0 8px 0;}
-.stats{display:flex;gap:16px;justify-content:center;margin-bottom:8px;color:#94a3b8;}
-#rankBoard{width:90%;background:rgba(0,0,0,0.6);border-radius:12px;padding:0 0 12px 0;margin:12px auto;max-height:200px;overflow-y:auto;transition:max-height 0.3s;}
-#rankBoard.collapsed{max-height:40px;overflow:hidden;}
-#rankBoard h3{margin:0;padding:8px 12px;font-size:22px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
-#rankList{list-style:none;padding:0;margin:0;}
-#rankList li{padding:4px 12px;}
-main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;width:100%;max-width:800px;padding-bottom:120px;margin-top:20px;}
-#clue{margin:16px 0;font-size:20px;color:#94a3b8;text-align:center;}
-.button-group{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;}
-button{padding:10px 20px;margin:4px;font-size:18px;border:none;border-radius:10px;background:linear-gradient(90deg,#6366f1,#a78bfa);color:#fff;cursor:pointer;}
-button:disabled{opacity:0.6;cursor:not-allowed;}
-.result{font-size:22px;margin-top:12px;padding:8px 16px;border-radius:10px;}
-.result.good{background:rgba(34,197,94,0.15);color:#22c55e;}
-.result.bad{background:rgba(239,68,68,0.15);color:#ef4444;}
-footer{width:100%;padding:12px;background:rgba(0,0,0,0.3);backdrop-filter:blur(8px);}
+body{
+  margin:0;
+  font-family:'Segoe UI',sans-serif;
+  background:linear-gradient(180deg,#0b1220,#1e1b4b);
+  color:#fff;
+}
+.header-block{
+  width:100%;
+  padding:16px 24px;
+  background:rgba(255,255,255,0.05);
+  backdrop-filter:blur(8px);
+  text-align:center;
+}
+.header-block h1{
+  margin:0 0 8px 0;
+}
+.stats{
+  display:flex;
+  gap:16px;
+  justify-content:center;
+  margin-bottom:8px;
+  color:#94a3b8;
+}
+#rankBoard{
+  width:90%;
+  background:rgba(0,0,0,0.6);
+  border-radius:12px;
+  padding:0 0 12px 0;
+  margin:12px auto;
+  max-height:200px;
+  overflow-y:auto;
+  transition:max-height 0.3s;
+}
+#rankBoard.collapsed{
+  max-height:40px;
+  overflow:hidden;
+}
+#rankBoard h3{
+  margin:0;
+  padding:8px 12px;
+  font-size:22px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  cursor:pointer;
+}
+#rankList{
+  list-style:none;
+  padding:0;
+  margin:0;
+}
+#rankList li{
+  padding:4px 12px;
+}
+main{
+  display:flex;
+  flex-direction: column;
+  align-items: center; /* 水平置中 */
+  justify-content: center; /* 垂直置中 */
+  gap:16px;
+  width: 100%;
+  max-width:800px;
+  padding-bottom:120px;
+  margin:20px auto;
+  text-align:center; /* 文字置中 */
+}
+#clue{
+  margin:16px 0;
+  font-size:20px;
+  color:#94a3b8;
+}
+.button-group{
+  display:flex;
+  gap:16px;
+  justify-content:center; /* 水平置中按鈕 */
+  flex-wrap:wrap;
+}
+button{
+  padding:10px 20px;
+  margin:4px;
+  font-size:18px;
+  border:none;
+  border-radius:10px;
+  background:linear-gradient(90deg,#6366f1,#a78bfa);
+  color:#fff;
+  cursor:pointer;
+}
+button:disabled{
+  opacity:0.6;
+  cursor:not-allowed;
+}
+.result{
+  font-size:22px;
+  margin-top:12px;
+  padding:8px 16px;
+  border-radius:10px;
+}
+.result.good{
+  background:rgba(34,197,94,0.15);
+  color:#22c55e;
+}
+.result.bad{
+  background:rgba(239,68,68,0.15);
+  color:#ef4444;
+}
+footer{
+  width:100%;
+  padding:12px;
+  background:rgba(0,0,0,0.3);
+  backdrop-filter:blur(8px);
+}
 </style>
 </head>
 <body>
@@ -67,6 +160,7 @@ const feedback=document.getElementById('feedback');
 const recBtn=document.getElementById('recBtn');
 const startBtn=document.getElementById('startBtn');
 const nextBtn=document.getElementById('nextBtn');
+const playRef=document.getElementById('playRef');
 const rankBoard=document.getElementById('rankBoard');
 const rankList=document.getElementById('rankList');
 const toggleRank=document.getElementById('toggleRank');
@@ -93,8 +187,7 @@ if(SpeechRecognition){
     } else {
       feedback.innerHTML=`<div class="result bad">❌ 錯誤! 剩餘次數: ${trialsLeft}</div>`;
       if(trialsLeft>0){
-        // 答錯自動再唸一次英文題目
-        setTimeout(()=>speakWord(qa[idx].answer),500);
+        setTimeout(()=>speakWord(qa[idx].answer),500); // 答錯自動唸一次
       } else {
         recBtn.disabled=true;
       }
@@ -169,6 +262,8 @@ nextBtn.addEventListener('click', ()=>{
     showQuestion();
   }
 });
+
+playRef.addEventListener('click', ()=>{ speakWord(qa[idx].answer); });
 
 function saveRank(name,sc,t){
   const recs=JSON.parse(localStorage.getItem('speaking_rank')||'[]');
