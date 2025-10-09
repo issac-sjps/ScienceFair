@@ -3,21 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>口說挑戰 - 可錄音版</title>
+<title>口說挑戰 - 限次挑戰版</title>
 <style>
-body{font-family:'Segoe UI',sans-serif;background:#0b1220;color:#fff;text-align:center;margin:0;padding:0;display:flex;flex-direction:column;align-items:center;}
-.header{width:100%;padding:16px;background:rgba(255,255,255,0.05);backdrop-filter:blur(8px);}
-.header h1{margin:0 0 8px 0;}
-.stats{display:flex;gap:16px;justify-content:center;}
-button{padding:10px 20px;margin:4px;font-size:18px;border:none;border-radius:10px;background:linear-gradient(90deg,#6366f1,#a78bfa);color:#fff;cursor:pointer;}
-button:disabled{opacity:0.6;cursor:not-allowed;}
-#clue{margin:16px 0;font-size:20px;}
-#feedback{margin:12px;font-size:18px;}
-#rankBoard{width:90%;background:rgba(0,0,0,0.6);border-radius:12px;padding:0 0 12px 0;margin-top:12px;max-height:200px;overflow-y:auto;transition:max-height 0.3s;}
+body{margin:0;font-family:'Segoe UI',sans-serif;background:linear-gradient(180deg,#0b1220,#1e1b4b);color:#fff;text-align:center;}
+.header-block{width:100%;padding:16px 24px;background:rgba(255,255,255,0.05);backdrop-filter:blur(8px);}
+.header-block h1{margin:0 0 8px 0;}
+.stats{display:flex;gap:16px;justify-content:center;margin-bottom:8px;color:#94a3b8;}
+#rankBoard{width:90%;background:rgba(0,0,0,0.6);border-radius:12px;padding:0 0 12px 0;margin:12px auto;max-height:200px;overflow-y:auto;transition:max-height 0.3s;}
 #rankBoard.collapsed{max-height:40px;overflow:hidden;}
 #rankBoard h3{margin:0;padding:8px 12px;font-size:22px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
 #rankList{list-style:none;padding:0;margin:0;}
 #rankList li{padding:4px 12px;}
+main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:16px;width:100%;max-width:800px;padding-bottom:120px;margin-top:20px;}
+#clue{margin:16px 0;font-size:20px;color:#94a3b8;}
+button{padding:10px 20px;margin:4px;font-size:18px;border:none;border-radius:10px;background:linear-gradient(90deg,#6366f1,#a78bfa);color:#fff;cursor:pointer;}
+button:disabled{opacity:0.6;cursor:not-allowed;}
 .result{font-size:22px;margin-top:12px;padding:8px 16px;border-radius:10px;}
 .result.good{background:rgba(34,197,94,0.15);color:#22c55e;}
 .result.bad{background:rgba(239,68,68,0.15);color:#ef4444;}
@@ -26,25 +26,24 @@ footer{width:100%;padding:12px;background:rgba(0,0,0,0.3);backdrop-filter:blur(8
 </head>
 <body>
 
-<div class="header">
-<h1>口說挑戰 - 可錄音版</h1>
-<div class="stats">分數：<span id="score">0</span> | 答對率：<span id="accuracy">0</span>%</div>
-<div id="clue">請按「開始挑戰」</div>
-</div>
-
-<div>
-<button id="startBtn">開始挑戰</button>
-<button id="recBtn">按下說話</button>
-<button id="nextBtn">下一題</button>
-<button id="playRef">播放單字</button>
-</div>
-
-<div id="feedback"></div>
-
+<div class="header-block">
+<h1>口說挑戰 - 限次挑戰版</h1>
+<div class="stats">分數：<span id="score">0</span> | 答對率：<span id="accuracy">0</span>% | 時間：<span id="timer">0</span>s</div>
 <div id="rankBoard" class="collapsed">
 <h3>🏆 排行榜 <span id="toggleRank">📌</span></h3>
 <ol id="rankList"></ol>
 </div>
+</div>
+
+<main>
+<div id="clue">請按「開始挑戰」</div>
+<div>
+<button id="startBtn">開始挑戰</button>
+<button id="recBtn">按下說話</button>
+<button id="nextBtn">下一題</button>
+</div>
+<div id="feedback"></div>
+</main>
 
 <footer>⏱️ 口說挑戰 — iPad 全螢幕</footer>
 
@@ -57,22 +56,21 @@ const qa=[
   {prompt:'拉在一起', answer:'pull together'}
 ];
 
-let idx=0,score=0,totalCount=0,correctCount=0,isRecording=false;
+let idx=0,score=0,totalCount=0,correctCount=0,isRecording=false,trialsLeft=5,startTime=0;
 const scoreEl=document.getElementById('score');
 const accuracyEl=document.getElementById('accuracy');
+const timerEl=document.getElementById('timer');
 const clue=document.getElementById('clue');
 const feedback=document.getElementById('feedback');
 const recBtn=document.getElementById('recBtn');
 const startBtn=document.getElementById('startBtn');
 const nextBtn=document.getElementById('nextBtn');
-const playRefBtn=document.getElementById('playRef');
 const rankBoard=document.getElementById('rankBoard');
 const rankList=document.getElementById('rankList');
 const toggleRank=document.getElementById('toggleRank');
-
-// 語音辨識
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition=null;
+let timerInterval=null;
 
 if(SpeechRecognition){
   recognition=new SpeechRecognition();
@@ -85,9 +83,11 @@ if(SpeechRecognition){
     const ref=qa[idx].answer.toLowerCase().replace(/ /g,'');
     let isCorrect = txt===ref;
     totalCount++;
-    if(isCorrect){ correctCount++; score+=20; }
-    feedback.innerHTML=`<div class="result ${isCorrect?'good':'bad'}">${isCorrect?'✅ 正確':'❌ 錯誤'}</div><div>你說: ${txt}</div>`;
+    trialsLeft--;
+    if(isCorrect){ correctCount++; score+=20; feedback.innerHTML=`<div class="result good">✅ 正確！</div>`; recBtn.disabled=true; }
+    else feedback.innerHTML=`<div class="result bad">❌ 錯誤! 剩餘次數: ${trialsLeft}</div>`;
     updateStats();
+    if(trialsLeft===0 && !isCorrect) recBtn.disabled=true;
   });
 
   recognition.addEventListener('end', ()=>{
@@ -101,44 +101,43 @@ if(SpeechRecognition){
     isRecording=false;
     recBtn.textContent='按下說話';
   });
-} else {
+}else{
   recBtn.disabled=true;
   recBtn.textContent='此瀏覽器不支援語音辨識';
 }
 
-// 更新統計
 function updateStats(){
   scoreEl.textContent=score;
   const rate=Math.floor(totalCount>0? (correctCount/totalCount*100):0);
   accuracyEl.textContent=rate;
 }
 
-// 顯示題目
 function showQuestion(){
   const q=qa[idx];
-  clue.innerHTML=`中文提示: ${q.prompt} <br>英文提示: ${q.answer}`;
+  trialsLeft=5;
   feedback.innerHTML='';
+  recBtn.disabled=false;
+  clue.innerHTML=`中文提示: ${q.prompt} <br>英文提示: ${q.answer}`;
+  speakWord(q.answer);
 }
 
-// 播放單字
-playRefBtn.addEventListener('click', ()=>{
-  const text=qa[idx].answer;
+function speakWord(text){
   if('speechSynthesis' in window){
     const u=new SpeechSynthesisUtterance(text);
     u.lang='en-US';
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(u);
   }
-});
+}
 
-// 開始挑戰
 startBtn.addEventListener('click', ()=>{
-  idx=0; score=0; totalCount=0; correctCount=0;
+  idx=0; score=0; totalCount=0; correctCount=0; startTime=Date.now();
   updateStats();
   showQuestion();
+  clearInterval(timerInterval);
+  timerInterval=setInterval(()=>{ timerEl.textContent=Math.floor((Date.now()-startTime)/1000); },1000);
 });
 
-// 錄音
 recBtn.addEventListener('click', ()=>{
   if(!recognition) return;
   if(!isRecording){
@@ -150,30 +149,42 @@ recBtn.addEventListener('click', ()=>{
   }
 });
 
-// 下一題
 nextBtn.addEventListener('click', ()=>{
-  idx=(idx+1)%qa.length;
-  showQuestion();
+  idx++;
+  if(idx>=qa.length){
+    finishChallenge();
+  } else {
+    showQuestion();
+  }
 });
 
-// 排行榜存取
-function saveRank(name,sc){
+// 排行榜
+function saveRank(name,sc,t){
   const recs=JSON.parse(localStorage.getItem('speaking_rank')||'[]');
-  recs.push({name,sc,date:new Date().toLocaleString()});
-  recs.sort((a,b)=>b.sc-a.sc);
+  recs.push({name,sc,t,date:new Date().toLocaleString()});
+  recs.sort((a,b)=>b.sc-a.sc || a.t-b.t);
   localStorage.setItem('speaking_rank',JSON.stringify(recs.slice(0,15)));
   renderRank();
 }
 
 function renderRank(){
   const recs=JSON.parse(localStorage.getItem('speaking_rank')||'[]');
-  rankList.innerHTML=recs.map((r,i)=>`<li>No.${i+1} ${r.name}: ${r.sc}分</li>`).join('');
+  rankList.innerHTML=recs.map((r,i)=>`<li>No.${i+1} ${r.name}: ${r.sc}分 / ${r.t}s</li>`).join('');
+}
+
+function finishChallenge(){
+  clearInterval(timerInterval);
+  const totalTime=Math.floor((Date.now()-startTime)/1000);
+  const name=prompt(`挑戰完成！分數: ${score} 分，時間: ${totalTime} 秒\n請輸入名字:`,'Player');
+  saveRank(name||'匿名',score,totalTime);
+  idx=0; score=0; totalCount=0; correctCount=0;
+  timerEl.textContent=0;
+  updateStats();
+  showQuestion();
 }
 
 // 排行榜收合
 toggleRank.addEventListener('click', ()=>{rankBoard.classList.toggle('collapsed');});
-
-// 初始化排行榜
 renderRank();
 </script>
 </body>
