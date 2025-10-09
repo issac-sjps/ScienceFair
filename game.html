@@ -13,14 +13,14 @@ body{margin:0;font-family:'Segoe UI',sans-serif;background:linear-gradient(180de
 .stats{display:flex;gap:16px;font-size:16px;color:var(--muted);margin-bottom:8px;}
 #progressBar{height:8px;background:rgba(255,255,255,0.1);border-radius:10px;overflow:hidden;width:80%;margin:8px auto;}
 #bar{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),#a78bfa);transition:width 0.3s;}
-#rankBoard{width:90%;background:rgba(0,0,0,0.6);border-radius:12px;padding:12px 0;font-size:20px;margin-top:12px;}
+#rankBoard{width:90%;background:rgba(0,0,0,0.6);border-radius:12px;padding:12px 0;font-size:20px;margin-top:12px;max-height:200px;overflow-y:auto;}
 #rankBoard h3{margin:0 0 8px 0;font-size:22px;}
 #rankList{list-style:none;padding:0;margin:0;}
 #rankList li{padding:4px 12px;}
 main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;width:100%;max-width:800px;margin-top:20px;}
 #clue{font-size:20px;color:var(--muted);}
 .gridInput{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;justify-content:center;}
-.letterBox{width:48px;height:48px;border:2px solid #fff;border-radius:6px;font-size:24px;text-align:center;background:#000;color:#fff;line-height:48px;}
+.letterBox{width:48px;height:48px;border:2px solid #fff;border-radius:6px;font-size:24px;text-align:center;background:#000;color:#fff;line-height:48px;cursor:pointer;}
 .letterBox.correct{background:var(--good);border-color:var(--good);}
 .letterBox.wrong{background:var(--bad);border-color:var(--bad);}
 input#virtualInput{width:1px;height:1px;opacity:0;position:absolute;top:0;left:0;}
@@ -84,7 +84,7 @@ const it=items[idx];
 clue.textContent='中文提示：'+it.zh;
 wordDisplay.innerHTML='';
 for(let c of it.word){
-if(c!==' '){const box=document.createElement('div');box.className='letterBox';wordDisplay.appendChild(box);} else {const spacer=document.createElement('div');spacer.style.width='12px';wordDisplay.appendChild(spacer);}}
+if(c!==' '){const box=document.createElement('div');box.className='letterBox';box.addEventListener('click',()=>{virtualInput.focus();});wordDisplay.appendChild(box);} else {const spacer=document.createElement('div');spacer.style.width='12px';wordDisplay.appendChild(spacer);}}
 speak(it.word);
 let boxes=document.querySelectorAll('.letterBox');
 let current=0;
@@ -127,7 +127,7 @@ function saveRank(name,sc,t){
 const recs=JSON.parse(localStorage.getItem('five_rank')||'[]');
 recs.push({name,sc,t,date:new Date().toLocaleString()});
 recs.sort((a,b)=>b.sc-a.sc||a.t-b.t);
-localStorage.setItem('five_rank',JSON.stringify(recs.slice(0,5)));
+localStorage.setItem('five_rank',JSON.stringify(recs.slice(0,15)));
 }
 
 function showRank(){
