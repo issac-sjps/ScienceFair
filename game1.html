@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
+<title>拼字挑戰</title>
+<style>
+:root{--bg:#0b1220;--accent:#6366f1;--good:#22c55e;--bad:#ef4444;--muted:#94a3b8}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Segoe UI',sans-serif;background:linear-gradient(180deg,#0b1220 0%,#1e1b4b 100%);color:#fff;min-height:100vh;display:flex;flex-direction:column;align-items:center;text-align:center;}
+.header-block{width:100%;padding:16px 24px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,255,255,0.05);backdrop-filter:blur(8px);position:relative;z-index:10;}
+.header-block h1{font-size:28px;margin:0 0 8px 0;}
+.stats{display:flex;gap:16px;font-size:16px;color:var(--muted);margin-bottom:8px;}
+#progressBar{height:8px;background:rgba(255,255,255,0.1);border-radius:10px;overflow:hidden;width:80%;margin:8px auto;}
+#bar{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),#a78bfa);transition:width 0.3s;}
+#rankBoard{width:90%;background:rgba(0,0,0,0.6);border-radius:12px;padding:0 0 12px 0;font-size:20px;margin-top:12px;max-height:200px;overflow-y:auto;transition:max-height 0.3s;}
+#rankBoard.collapsed{max-height:40px;overflow:hidden;}
+#rankBoard h3{margin:0;padding:8px 12px;font-size:22px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
+#rankList{list-style:none;padding:0;margin:0;}
+#rankList li{padding:4px 12px;}
+main{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start; /* 往上靠 */
+    gap:16px;
+    width:100%;
+    max-width:800px;
+    margin-top:40px; /* 上方空間 */
+    padding-bottom:120px; /* 鍵盤彈出時不擋住 */
+}
+#clue{font-size:20px;color:var(--muted);}
+.gridInput{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;justify-content:center;}
+.letterBox{width:48px;height:48px;border:2px solid #fff;border-radius:6px;font-size:24px;text-align:center;background:#000;color:#fff;line-height:48px;cursor:pointer;}
+.letterBox.correct{background:var(--good);border-color:var(--good);}
+.letterBox.wrong{background:var(--bad);border-color:var(--bad);}
+input#virtualInput{width:1px;height:1px;opacity:0;position:absolute;top:0;left:0;}
+.buttons{display:flex;gap:16px;margin-top:16px;}
+button{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 20px;color:#fff;font-size:18px;cursor:pointer;}
+button.primary{background:linear-gradient(90deg,var(--accent),#7c3aed);border:none;}
+.result{font-size:22px;margin-top:12px;padding:8px 16px;border-radius:10px;}
+.result.good{background:rgba(34,197,94,0.15);color:var(--good);}
+.result.bad{background:rgba(239,68,68,0.15);color:var(--bad);}
+footer{width:100%;padding:12px;text-align:center;background:rgba(0,0,0,0.3);backdrop-filter:blur(8px);font-size:18px;color:var(--muted);margin-top:20px;}
+</style>
+</head>
+<body>
+<div class="header-block">
+<h1>拼字挑戰</h1>
+<div class="stats">
+<div>分數：<span id="score">0</span></div>
+<div>時間：<span id="timer">0</span> 秒</div>
+</div>
+<div id="progressBar"><div id="bar"></div></div>
+<div id="rankBoard" class="collapsed">
+<h3>🏆 排行榜 <span id="toggleRank">📌</span></h3>
+<ol id="rankList"></ol>
+</div>
+</div>
+<main>
+<div id="clue">請按開始</div>
+<div id="wordDisplay" class="gridInput"></div>
+<input type="text" id="virtualInput" />
+<div class="buttons">
+<button id="startBtn" class="primary">開始挑戰</button>
+<button id="speakBtn">🔊</button>
+</div>
+<div id="feedback"></div>
+</main>
+<footer>⏱️ 拼字挑戰 — iPad 全螢幕遊戲版</footer>
+<script>
+const items=[
+{word:'magnet',zh:'磁鐵'},
+{word:'north pole',zh:'北極'},
+{word:'south pole',zh:'南極'},
+{word:'push away',zh:'推開'},
+{word:'pull together',zh:'拉在一起'}
+];
+let idx=0,score=0,startTime=null,timerInt=null;
+const scoreEl=document.getElementById('score');
+const timerEl=document.getElementById('timer');
+const clue=document.getElementById('clue');
+const wordDisplay=document.getElementById('wordDisplay');
+const feedback=document.getElementById('feedback');
+const bar=document.getElementById('bar');
+const rankList=document.getElementById('rankList');
+const virtualInput=document.getElementById('virtualInput');
+const rankBoard=document.getElementById('rankBoard');
+const toggleRank=document.getElementById('toggleRank');
+
+function speak(t){if(!('speechSynthesis'in window))return;const u=new SpeechSynthesisUtterance(t);u.lang='en-US';speechSynthesis.cancel();speechSynthesis.speak(u)}
+
+function startGame(){
+    idx=0;score=0;updateProgress();feedback.textContent='';
+    startTime=Date.now();
+    if(timerInt)clearInterval(timerInt);
+    timerInt=setInterval(()=>{timerEl.textContent=Math.floor((Date.now()-startTime)/1000);},1000);
+    render();
+    virtualInput.focus();
+}
+
+function render(){
+    if(idx>=items.length){finish();return;}
+    const it=items[idx];
+    clue.textContent='中文提示：'+it.zh;
+    wordDisplay.innerHTML='';
+    for(let c of it.word){
+        if(c!==' '){
+            const box=document.createElement('div');
+            box.className='letterBox';
+            box.addEventListener('click',()=>{virtualInput.focus();});
+            wordDisplay.appendChild(box);
+        } else {
+            const spacer=document.createElement('div');
+            spacer.style.width='12px';
+            wordDisplay.appendChild(spacer);
+        }
+    }
+    speak(it.word);
+    let boxes=document.querySelectorAll('.letterBox');
+    let current=0;
+    virtualInput.value='';
+    virtualInput.focus();
+    virtualInput.oninput=function(){
+        const val=virtualInput.value;
+        if(val.length>current){
+            boxes[current].textContent=val[val.length-1].toLowerCase();
+            current++;
+            if(current>=boxes.length){checkAnswer();}
+        } else if(val.length<current){
+            current--;
+            boxes[current].textContent='';
+        }
+    }
+}
+
+function checkAnswer(){
+    const it=items[idx];
+    const boxes=document.querySelectorAll('.letterBox');
+    let val='';
+    boxes.forEach(b=>{val+=b.textContent});
+    let ok=val.toLowerCase()===it.word.replace(/ /g,'').toLowerCase();
+    boxes.forEach(b=>b.classList.add(ok?'correct':'wrong'));
+    score+=ok?20:-2;
+    if(score>100)score=100;
+    updateProgress();
+    idx++;
+    setTimeout(render,800);
+}
+
+function updateProgress(){
+    bar.style.width=(idx/items.length*100)+'%';
+    scoreEl.textContent=score;
+}
+
+function finish(){
+    clearInterval(timerInt);
+    const time=Math.floor((Date.now()-startTime)/1000);
+    const name=prompt('挑戰完成！請輸入名字：','Player');
+    saveRank(name||'匿名',score,time);
+    showRank();
+    feedback.innerHTML=`<div class='result good'>🏁 完成！分數 ${score} 用時 ${time} 秒</div>`;
+}
+
+function saveRank(name, sc, t) {
+    const recs = JSON.parse(localStorage.getItem('five_rank') || '[]');
+    recs.push({ name, sc, t, date: new Date().toLocaleString() });
+    recs.sort((a, b) => b.sc - a.sc || a.t - b.t);
+    localStorage.setItem('five_rank', JSON.stringify(recs.slice(0, 15)));
+}
+
+function showRank() {
+    const recs = JSON.parse(localStorage.getItem('five_rank') || '[]');
+    rankList.innerHTML = recs.map((r, i) => `<li>No.${i+1} ${r.name}：${r.sc}分 / ${r.t}s</li>`).join('');
+}
+
+// 切換排行榜收合
+toggleRank.addEventListener('click', () => {
+    rankBoard.classList.toggle('collapsed');
+});
+
+// 按鈕事件
+document.getElementById('startBtn').onclick=startGame;
+document.getElementById('speakBtn').onclick=()=>{const it=items[idx];if(it)speak(it.word)};
+
+// 初始化排行榜
+showRank();
+</script>
+</body>
+</html>
