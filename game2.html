@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>口說挑戰 - 置中版</title>
+<title>口說挑戰 - 系統辨識版</title>
 <style>
 body{
   margin:0;
@@ -34,13 +34,8 @@ body{
   border-radius:12px;
   padding:0 0 12px 0;
   margin:12px auto;
-  max-height:200px;
+  max-height:180px;
   overflow-y:auto;
-  transition:max-height 0.3s;
-}
-#rankBoard.collapsed{
-  max-height:40px;
-  overflow:hidden;
 }
 #rankBoard h3{
   margin:0;
@@ -62,14 +57,14 @@ body{
 main{
   display:flex;
   flex-direction: column;
-  align-items: center; /* 水平置中 */
-  justify-content: center; /* 垂直置中 */
+  align-items: center;
+  justify-content: center;
   gap:16px;
   width: 100%;
   max-width:800px;
   padding-bottom:120px;
   margin:20px auto;
-  text-align:center; /* 文字置中 */
+  text-align:center;
 }
 #clue{
   margin:16px 0;
@@ -79,7 +74,7 @@ main{
 .button-group{
   display:flex;
   gap:16px;
-  justify-content:center; /* 水平置中按鈕 */
+  justify-content:center;
   flex-wrap:wrap;
 }
 button{
@@ -97,9 +92,9 @@ button:disabled{
   cursor:not-allowed;
 }
 .result{
-  font-size:22px;
-  margin-top:12px;
-  padding:8px 16px;
+  font-size:20px;
+  margin-top:8px;
+  padding:6px 12px;
   border-radius:10px;
 }
 .result.good{
@@ -121,10 +116,10 @@ footer{
 <body>
 
 <div class="header-block">
-<h1>口說挑戰 - 限次挑戰版</h1>
+<h1>口說挑戰 - 系統辨識版</h1>
 <div class="stats">分數：<span id="score">0</span> | 答對率：<span id="accuracy">0</span>% | 時間：<span id="timer">0</span>s</div>
-<div id="rankBoard" class="collapsed">
-<h3>🏆 排行榜 <span id="toggleRank">📌</span></h3>
+<div id="rankBoard">
+<h3>🏆 排行榜</h3>
 <ol id="rankList"></ol>
 </div>
 </div>
@@ -138,6 +133,7 @@ footer{
 <button id="playRef">播放單字</button>
 </div>
 <div id="feedback"></div>
+<div id="userSpeech"></div>
 </main>
 
 <footer>⏱️ 口說挑戰 — iPad 全螢幕</footer>
@@ -157,13 +153,12 @@ const accuracyEl=document.getElementById('accuracy');
 const timerEl=document.getElementById('timer');
 const clue=document.getElementById('clue');
 const feedback=document.getElementById('feedback');
+const userSpeech=document.getElementById('userSpeech');
 const recBtn=document.getElementById('recBtn');
 const startBtn=document.getElementById('startBtn');
 const nextBtn=document.getElementById('nextBtn');
 const playRef=document.getElementById('playRef');
-const rankBoard=document.getElementById('rankBoard');
 const rankList=document.getElementById('rankList');
-const toggleRank=document.getElementById('toggleRank');
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition=null;
 let timerInterval=null;
@@ -175,9 +170,14 @@ if(SpeechRecognition){
   recognition.maxAlternatives=1;
 
   recognition.addEventListener('result', e=>{
-    const txt=e.results[0][0].transcript.trim().toLowerCase().replace(/ /g,'');
+    const txt=e.results[0][0].transcript.trim();
     const ref=qa[idx].answer.toLowerCase().replace(/ /g,'');
-    let isCorrect = txt===ref;
+    const userInput=txt.toLowerCase().replace(/ /g,'');
+
+    // 顯示系統偵測文字
+    userSpeech.innerHTML=`你唸出來聽起來像: <strong>${txt}</strong>`;
+
+    let isCorrect = userInput===ref;
     totalCount++;
     trialsLeft--;
     if(isCorrect){
@@ -187,7 +187,7 @@ if(SpeechRecognition){
     } else {
       feedback.innerHTML=`<div class="result bad">❌ 錯誤! 剩餘次數: ${trialsLeft}</div>`;
       if(trialsLeft>0){
-        setTimeout(()=>speakWord(qa[idx].answer),500); // 答錯自動唸一次
+        setTimeout(()=>speakWord(qa[idx].answer),500);
       } else {
         recBtn.disabled=true;
       }
@@ -221,8 +221,10 @@ function showQuestion(){
   const q=qa[idx];
   trialsLeft=5;
   feedback.innerHTML='';
+  userSpeech.innerHTML='';
   recBtn.disabled=false;
-  clue.innerHTML=`中文提示: ${q.prompt} <br>英文提示: ${q.answer}`;
+  clue.innerHTML=`<div><strong>中文題是:</strong> ${q.prompt}</div>
+                  <div><strong>英文題是:</strong> ${q.answer}</div>`;
   speakWord(q.answer);
 }
 
@@ -289,7 +291,6 @@ function finishChallenge(){
   showQuestion();
 }
 
-toggleRank.addEventListener('click', ()=>{rankBoard.classList.toggle('collapsed');});
 renderRank();
 </script>
 </body>
