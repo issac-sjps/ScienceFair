@@ -13,8 +13,9 @@ body{margin:0;font-family:'Segoe UI',sans-serif;background:linear-gradient(180de
 .stats{display:flex;gap:16px;font-size:16px;color:var(--muted);margin-bottom:8px;}
 #progressBar{height:8px;background:rgba(255,255,255,0.1);border-radius:10px;overflow:hidden;width:80%;margin:8px auto;}
 #bar{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),#a78bfa);transition:width 0.3s;}
-#rankBoard{width:90%;background:rgba(0,0,0,0.6);border-radius:12px;padding:12px 0;font-size:20px;margin-top:12px;max-height:200px;overflow-y:auto;}
-#rankBoard h3{margin:0 0 8px 0;font-size:22px;}
+#rankBoard{width:90%;background:rgba(0,0,0,0.6);border-radius:12px;padding:0 0 12px 0;font-size:20px;margin-top:12px;max-height:200px;overflow-y:auto;transition:max-height 0.3s;}
+#rankBoard.collapsed{max-height:40px;overflow:hidden;}
+#rankBoard h3{margin:0;padding:8px 12px;font-size:22px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
 #rankList{list-style:none;padding:0;margin:0;}
 #rankList li{padding:4px 12px;}
 main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;width:100%;max-width:800px;margin-top:20px;}
@@ -41,8 +42,8 @@ footer{width:100%;padding:12px;text-align:center;background:rgba(0,0,0,0.3);back
 <div>時間：<span id="timer">0</span> 秒</div>
 </div>
 <div id="progressBar"><div id="bar"></div></div>
-<div id="rankBoard">
-<h3>🏆 排行榜</h3>
+<div id="rankBoard" class="collapsed">
+<h3>🏆 排行榜 <span id="toggleRank">📌</span></h3>
 <ol id="rankList"></ol>
 </div>
 </div>
@@ -74,6 +75,8 @@ const feedback=document.getElementById('feedback');
 const bar=document.getElementById('bar');
 const rankList=document.getElementById('rankList');
 const virtualInput=document.getElementById('virtualInput');
+const rankBoard=document.getElementById('rankBoard');
+const toggleRank=document.getElementById('toggleRank');
 
 function speak(t){if(!('speechSynthesis'in window))return;const u=new SpeechSynthesisUtterance(t);u.lang='en-US';speechSynthesis.cancel();speechSynthesis.speak(u)}
 
@@ -120,25 +123,4 @@ const time=Math.floor((Date.now()-startTime)/1000);
 const name=prompt('挑戰完成！請輸入名字：','Player');
 saveRank(name||'匿名',score,time);
 showRank();
-feedback.innerHTML=`<div class='result good'>🏁 完成！分數 ${score} 用時 ${time} 秒</div>`;
-}
-
-function saveRank(name,sc,t){
-const recs=JSON.parse(localStorage.getItem('five_rank')||'[]');
-recs.push({name,sc,t,date:new Date().toLocaleString()});
-recs.sort((a,b)=>b.sc-a.sc||a.t-b.t);
-localStorage.setItem('five_rank',JSON.stringify(recs.slice(0,15)));
-}
-
-function showRank(){
-const recs=JSON.parse(localStorage.getItem('five_rank')||'[]');
-rankList.innerHTML=recs.map((r,i)=>`<li>No.${i+1} ${r.name}：${r.sc}分 / ${r.t}s</li>`).join('');
-}
-
-document.getElementById('startBtn').onclick=startGame;
-document.getElementById('speakBtn').onclick=()=>{const it=items[idx];if(it)speak(it.word)};
-
-showRank();
-</script>
-</body>
-</html>
+feedback.innerHTML=`<div class='result good'>🏁 完成！分數 ${score} 用時 ${time
