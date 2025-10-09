@@ -18,7 +18,18 @@ body{margin:0;font-family:'Segoe UI',sans-serif;background:linear-gradient(180de
 #rankBoard h3{margin:0;padding:8px 12px;font-size:22px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
 #rankList{list-style:none;padding:0;margin:0;}
 #rankList li{padding:4px 12px;}
-main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;width:100%;max-width:800px;margin-top:20px;}
+main{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start; /* 往上靠 */
+    gap:16px;
+    width:100%;
+    max-width:800px;
+    margin-top:40px; /* 上方空間 */
+    padding-bottom:120px; /* 鍵盤彈出時不擋住 */
+}
 #clue{font-size:20px;color:var(--muted);}
 .gridInput{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;justify-content:center;}
 .letterBox{width:48px;height:48px;border:2px solid #fff;border-radius:6px;font-size:24px;text-align:center;background:#000;color:#fff;line-height:48px;cursor:pointer;}
