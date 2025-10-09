@@ -7,26 +7,31 @@
   <style>
     body {
       font-family: 'Segoe UI', Arial, sans-serif;
-      background-color: #f0f0f0;
+      margin: 0;
+      padding: 0;
+      background-color: #0b1d3a; /* 深藍背景 */
+      overflow-x: hidden;
       text-align: center;
-      padding: 50px;
+      color: #fff;
     }
 
     h1 {
       font-size: 2.5em;
-      margin-bottom: 0.2em;
+      margin-top: 40px;
+      text-shadow: 2px 2px #000;
     }
 
     h2 {
       font-size: 1.5em;
       margin-top: 0;
-      color: #555;
+      color: #ffeb3b;
+      text-shadow: 1px 1px #000;
     }
 
     .section-title {
-      font-size: 1.3em;
+      font-size: 1.5em;
       margin: 30px 0 10px 0;
-      color: #333;
+      text-shadow: 1px 1px #000;
     }
 
     .button-row {
@@ -36,17 +41,22 @@
     .button-row a {
       display: inline-block;
       margin: 10px;
-      padding: 15px 30px;
+      padding: 15px 35px;
       font-size: 1.2em;
       text-decoration: none;
       color: #fff;
-      background-color: #0077cc;
-      border-radius: 8px;
-      transition: background-color 0.3s;
+      background: linear-gradient(45deg, #0077cc, #00bfff);
+      border-radius: 10px;
+      border: 2px solid #fff;
+      box-shadow: 0 0 10px #fff, 0 0 20px #00bfff inset;
+      transition: all 0.3s ease;
+      text-shadow: 1px 1px #000;
     }
 
     .button-row a:hover {
-      background-color: #005fa3;
+      transform: translateY(-5px) scale(1.05);
+      box-shadow: 0 0 15px #fff, 0 0 25px #00ffff inset;
+      background: linear-gradient(45deg, #00bfff, #0077cc);
     }
 
     .section-image {
@@ -55,19 +65,44 @@
       height: auto;
       border-radius: 10px;
       cursor: pointer;
-      transition: transform 0.3s;
+      transition: transform 0.3s, box-shadow 0.3s;
+      border: 3px solid #fff;
     }
 
     .section-image:hover {
       transform: scale(1.05);
+      box-shadow: 0 0 20px #fff;
+    }
+
+    /* 小球容器 */
+    #balls {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none; /* 不阻擋滑鼠 */
+      z-index: -1; /* 放在內容後面 */
+    }
+
+    /* 小球 */
+    .ball {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      background-color: #00ffff;
+      border-radius: 50%;
+      opacity: 0.7;
     }
   </style>
 </head>
 <body>
+  <div id="balls"></div>
+
   <h1>高雄捷運 雙語同行 磁力迷宮 復古探險</h1>
   <h2>Bilingual Kaohsiung Metro  Magnetic Maze Retro</h2>
 
-  <!-- 第一行按鈕區 -->
+  <!-- 學生專用-發音練習網 -->
   <a href="https://issac-sjps.github.io/ScienceFair/Title.jpg" target="_blank">
     <img src="https://issac-sjps.github.io/ScienceFair/Title.jpg" alt="學生專用-發音練習網" class="section-image">
   </a>
@@ -78,12 +113,64 @@
     <a href="https://issac-sjps.github.io/ScienceFair/stage3" target="_blank">關卡三</a>
   </div>
 
-  <!-- 第二行按鈕區 -->
+  <!-- 遊戲挑戰區 -->
   <div class="section-title">遊戲挑戰區</div>
   <div class="button-row">
     <a href="https://issac-sjps.github.io/ScienceFair/game1" target="_blank">拼單字大挑戰</a>
     <a href="https://issac-sjps.github.io/ScienceFair/game2" target="_blank">唸單字大挑戰</a>
     <a href="https://issac-sjps.github.io/ScienceFair/game3" target="_blank">拉單字大挑戰</a>
   </div>
+
+  <script>
+    const ballCount = 30;
+    const ballsContainer = document.getElementById('balls');
+    const balls = [];
+
+    for (let i = 0; i < ballCount; i++) {
+      const ball = document.createElement('div');
+      ball.classList.add('ball');
+      ball.style.left = Math.random() * window.innerWidth + 'px';
+      ball.style.top = Math.random() * window.innerHeight + 'px';
+      ball.vx = (Math.random() - 0.5) * 0.5; // 水平速度
+      ball.vy = (Math.random() - 0.5) * 0.5; // 垂直速度
+      ballsContainer.appendChild(ball);
+      balls.push(ball);
+    }
+
+    let mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+
+    window.addEventListener('mousemove', e => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+    });
+
+    function animate() {
+      balls.forEach(ball => {
+        // 移動小球
+        ball.style.left = parseFloat(ball.style.left) + ball.vx + 'px';
+        ball.style.top = parseFloat(ball.style.top) + ball.vy + 'px';
+
+        // 碰到邊界反彈
+        if (parseFloat(ball.style.left) < 0 || parseFloat(ball.style.left) > window.innerWidth - 12) ball.vx *= -1;
+        if (parseFloat(ball.style.top) < 0 || parseFloat(ball.style.top) > window.innerHeight - 12) ball.vy *= -1;
+
+        // 磁力吸引效果
+        let dx = mouse.x - parseFloat(ball.style.left);
+        let dy = mouse.y - parseFloat(ball.style.top);
+        let dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 100) {
+          ball.vx += dx / 1000;
+          ball.vy += dy / 1000;
+        }
+
+        // 阻尼
+        ball.vx *= 0.98;
+        ball.vy *= 0.98;
+      });
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+  </script>
 </body>
 </html>
