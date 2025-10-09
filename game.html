@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
 <title>拼字挑戰</title>
 <style>
 :root{--bg:#0b1220;--accent:#6366f1;--good:#22c55e;--bad:#ef4444;--muted:#94a3b8}
@@ -23,6 +23,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;justify-conten
 .letterBox{width:48px;height:48px;border:2px solid #fff;border-radius:6px;font-size:24px;text-align:center;background:#000;color:#fff;line-height:48px;}
 .letterBox.correct{background:var(--good);border-color:var(--good);}
 .letterBox.wrong{background:var(--bad);border-color:var(--bad);}
+input#virtualInput{width:1px;height:1px;opacity:0;position:absolute;top:0;left:0;}
 .buttons{display:flex;gap:16px;margin-top:16px;}
 button{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 20px;color:#fff;font-size:18px;cursor:pointer;}
 button.primary{background:linear-gradient(90deg,var(--accent),#7c3aed);border:none;}
@@ -48,6 +49,7 @@ footer{width:100%;padding:12px;text-align:center;background:rgba(0,0,0,0.3);back
 <main>
 <div id="clue">請按開始</div>
 <div id="wordDisplay" class="gridInput"></div>
+<input type="text" id="virtualInput" />
 <div class="buttons">
 <button id="startBtn" class="primary">開始挑戰</button>
 <button id="speakBtn">🔊</button>
@@ -71,10 +73,11 @@ const wordDisplay=document.getElementById('wordDisplay');
 const feedback=document.getElementById('feedback');
 const bar=document.getElementById('bar');
 const rankList=document.getElementById('rankList');
+const virtualInput=document.getElementById('virtualInput');
 
 function speak(t){if(!('speechSynthesis'in window))return;const u=new SpeechSynthesisUtterance(t);u.lang='en-US';speechSynthesis.cancel();speechSynthesis.speak(u)}
 
-function startGame(){idx=0;score=0;updateProgress();feedback.textContent='';startTime=Date.now();if(timerInt)clearInterval(timerInt);timerInt=setInterval(()=>{timerEl.textContent=Math.floor((Date.now()-startTime)/1000);},1000);render();}
+function startGame(){idx=0;score=0;updateProgress();feedback.textContent='';startTime=Date.now();if(timerInt)clearInterval(timerInt);timerInt=setInterval(()=>{timerEl.textContent=Math.floor((Date.now()-startTime)/1000);},1000);render();virtualInput.focus();}
 
 function render(){if(idx>=items.length){finish();return;}
 const it=items[idx];
@@ -85,9 +88,13 @@ if(c!==' '){const box=document.createElement('div');box.className='letterBox';wo
 speak(it.word);
 let boxes=document.querySelectorAll('.letterBox');
 let current=0;
-document.onkeydown=function(e){
-if(e.key.length===1 && current<boxes.length){boxes[current].textContent=e.key.toLowerCase();current++;if(current>=boxes.length){checkAnswer();}}
-if(e.key==='Backspace'){current--;if(current>=0)boxes[current].textContent='';}
+virtualInput.value='';
+virtualInput.focus();
+virtualInput.oninput=function(e){
+const val=virtualInput.value;
+if(val.length>current){boxes[current].textContent=val[val.length-1].toLowerCase();current++;
+if(current>=boxes.length){checkAnswer();}}
+else if(val.length<current){current--;boxes[current].textContent='';}
 }
 }
 
