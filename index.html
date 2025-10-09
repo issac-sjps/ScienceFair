@@ -23,8 +23,14 @@
       color: #555;
     }
 
+    .section-title {
+      font-size: 1.3em;
+      margin: 30px 0 10px 0;
+      color: #333;
+    }
+
     .button-row {
-      margin: 30px 0;
+      margin: 20px 0 40px 0;
     }
 
     .button-row a {
@@ -42,22 +48,42 @@
     .button-row a:hover {
       background-color: #005fa3;
     }
+
+    .section-image {
+      margin-bottom: 10px;
+      max-width: 100%;
+      height: auto;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform 0.3s;
+    }
+
+    .section-image:hover {
+      transform: scale(1.05);
+    }
   </style>
 </head>
 <body>
   <h1>高雄捷運 雙語同行 磁力迷宮 復古探險</h1>
   <h2>Bilingual Kaohsiung Metro  Magnetic Maze Retro</h2>
 
-  <!-- 第一行三個按鈕 -->
+  <!-- 第一行按鈕區 -->
+  <a href="https://issac-sjps.github.io/ScienceFair/Title.jpg" target="_blank">
+    <img src="https://issac-sjps.github.io/ScienceFair/Title.jpg" alt="學生專用-發音練習網" class="section-image">
+  </a>
+  <div class="section-title">學生專用-發音練習網</div>
   <div class="button-row">
     <a href="https://issac-sjps.github.io/ScienceFair/stage1" target="_blank">關卡一</a>
     <a href="https://issac-sjps.github.io/ScienceFair/stage2" target="_blank">關卡二</a>
     <a href="https://issac-sjps.github.io/ScienceFair/stage3" target="_blank">關卡三</a>
   </div>
 
-  <!-- 第二行一個按鈕 -->
+  <!-- 第二行按鈕區 -->
+  <div class="section-title">遊戲挑戰區</div>
   <div class="button-row">
-    <a href="https://issac-sjps.github.io/ScienceFair/game" target="_blank">單字大挑戰</a>
+    <a href="https://issac-sjps.github.io/ScienceFair/game1" target="_blank">拼單字大挑戰</a>
+    <a href="https://issac-sjps.github.io/ScienceFair/game2" target="_blank">唸單字大挑戰</a>
+    <a href="https://issac-sjps.github.io/ScienceFair/game3" target="_blank">拉單字大挑戰</a>
   </div>
 </body>
 </html>
