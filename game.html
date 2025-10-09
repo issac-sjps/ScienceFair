@@ -132,7 +132,7 @@ localStorage.setItem('five_rank',JSON.stringify(recs.slice(0,15)));
 
 function showRank(){
 const recs=JSON.parse(localStorage.getItem('five_rank')||'[]');
-rankList.innerHTML=recs.map(r=>`<li>${r.name}：${r.sc}分 / ${r.t}s</li>`).join('');
+rankList.innerHTML=recs.map((r,i)=>`<li>No.${i+1} ${r.name}：${r.sc}分 / ${r.t}s</li>`).join('');
 }
 
 document.getElementById('startBtn').onclick=startGame;
