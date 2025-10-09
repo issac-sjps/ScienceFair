@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>拼字挑戰 - 發音版</title>
+<title>拼字挑戰 - 黑字按鈕版</title>
 <style>
 body{
   margin:0;
@@ -77,7 +77,7 @@ main{
   gap:8px;
   margin:8px 0;
 }
-.letter{
+.letter, .ansLetter{
   padding:10px 14px;
   background:linear-gradient(90deg,#6366f1,#a78bfa);
   border-radius:8px;
@@ -93,21 +93,15 @@ main{
   justify-content:center;
   gap:8px;
 }
-.ansLetter{
-  padding:8px 12px;
-  background:rgba(255,255,255,0.1);
-  border-radius:6px;
-  font-size:20px;
-  font-weight:bold;
-}
+/* 按鈕顏色改橘黃，文字改黑色 */
 button{
   padding:10px 20px;
   margin:4px;
   font-size:18px;
   border:none;
   border-radius:10px;
-  background:linear-gradient(90deg,#6366f1,#a78bfa);
-  color:#fff;
+  background:linear-gradient(90deg,#f59e0b,#fbbf24);
+  color:#000;
   cursor:pointer;
 }
 button:disabled{
@@ -128,6 +122,16 @@ button:disabled{
   background:rgba(239,68,68,0.15);
   color:#ef4444;
 }
+.button-group{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:8px;
+}
+.button-group .line-break{
+  flex-basis:100%;
+  height:0;
+}
 footer{
   width:100%;
   padding:12px;
@@ -139,7 +143,7 @@ footer{
 <body>
 
 <div class="header-block">
-<h1>拼字挑戰 - 發音版</h1>
+<h1>新莊國小-字卡拼字挑戰</h1>
 <div class="stats">分數：<span id="score">0</span> | 答對率：<span id="accuracy">0</span>% | 時間：<span id="timer">0</span>s</div>
 <div id="rankBoard">
 <h3>🏆 排行榜</h3>
@@ -155,7 +159,9 @@ footer{
 <button id="startBtn">開始挑戰</button>
 <button id="submitBtn">提交答案</button>
 <button id="nextBtn">下一題</button>
+<div class="line-break"></div>
 <button id="playRef">播放單字</button>
+<button id="resetBtn">字卡重置</button>
 </div>
 <div id="feedback"></div>
 </main>
@@ -163,6 +169,7 @@ footer{
 <footer>⏱️ 拼字挑戰 — iPad 全螢幕</footer>
 
 <script>
+// 題庫
 const qa=[
   {prompt:'磁鐵', answer:'magnet'},
   {prompt:'北極', answer:'north pole'},
@@ -183,6 +190,7 @@ const startBtn=document.getElementById('startBtn');
 const submitBtn=document.getElementById('submitBtn');
 const nextBtn=document.getElementById('nextBtn');
 const playRef=document.getElementById('playRef');
+const resetBtn=document.getElementById('resetBtn');
 const rankList=document.getElementById('rankList');
 let timerInterval=null;
 
@@ -210,16 +218,21 @@ function speakWord(text){
   }
 }
 
+let currentLetters=[];
+
 function renderQuestion(){
   const q=qa[idx];
   feedback.innerHTML='';
   answerArea.innerHTML='';
-  clue.innerHTML=`<div><strong>中文題是:</strong> ${q.prompt}</div>
-                  <div><strong>英文題是:</strong> ${q.answer}</div>`;
-  speakWord(q.answer); // 開始時自動唸一次
-  const letters = shuffle(q.answer.replace(/ /g,''));
+  clue.innerHTML=`<div><strong>中文題是:</strong> ${q.prompt}</div>`;
+  speakWord(q.answer);
+  currentLetters = shuffle(q.answer.replace(/ /g,''));
+  renderLetterBank();
+}
+
+function renderLetterBank(){
   letterBank.innerHTML='';
-  letters.forEach(l=>{
+  currentLetters.forEach(l=>{
     const btn=document.createElement('div');
     btn.className='letter';
     btn.textContent=l;
@@ -227,6 +240,10 @@ function renderQuestion(){
       const ansDiv=document.createElement('div');
       ansDiv.className='ansLetter';
       ansDiv.textContent=l;
+      ansDiv.addEventListener('click', ()=>{
+        answerArea.removeChild(ansDiv);
+        btn.style.visibility='visible';
+      });
       answerArea.appendChild(ansDiv);
       btn.style.visibility='hidden';
     });
@@ -266,6 +283,7 @@ startBtn.addEventListener('click', ()=>{
 });
 
 playRef.addEventListener('click', ()=>{ speakWord(qa[idx].answer); });
+resetBtn.addEventListener('click', ()=>{ renderQuestion(); });
 
 function saveRank(name,sc,t){
   const recs=JSON.parse(localStorage.getItem('spelling_rank')||'[]');
