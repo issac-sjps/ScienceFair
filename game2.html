@@ -14,8 +14,9 @@ body{margin:0;font-family:'Segoe UI',sans-serif;background:linear-gradient(180de
 #rankBoard h3{margin:0;padding:8px 12px;font-size:22px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
 #rankList{list-style:none;padding:0;margin:0;}
 #rankList li{padding:4px 12px;}
-main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:16px;width:100%;max-width:800px;padding-bottom:120px;margin-top:20px;}
-#clue{margin:16px 0;font-size:20px;color:#94a3b8;}
+main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;width:100%;max-width:800px;padding-bottom:120px;margin-top:20px;}
+#clue{margin:16px 0;font-size:20px;color:#94a3b8;text-align:center;}
+.button-group{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;}
 button{padding:10px 20px;margin:4px;font-size:18px;border:none;border-radius:10px;background:linear-gradient(90deg,#6366f1,#a78bfa);color:#fff;cursor:pointer;}
 button:disabled{opacity:0.6;cursor:not-allowed;}
 .result{font-size:22px;margin-top:12px;padding:8px 16px;border-radius:10px;}
@@ -37,10 +38,11 @@ footer{width:100%;padding:12px;background:rgba(0,0,0,0.3);backdrop-filter:blur(8
 
 <main>
 <div id="clue">請按「開始挑戰」</div>
-<div>
+<div class="button-group">
 <button id="startBtn">開始挑戰</button>
 <button id="recBtn">按下說話</button>
 <button id="nextBtn">下一題</button>
+<button id="playRef">播放單字</button>
 </div>
 <div id="feedback"></div>
 </main>
@@ -84,10 +86,20 @@ if(SpeechRecognition){
     let isCorrect = txt===ref;
     totalCount++;
     trialsLeft--;
-    if(isCorrect){ correctCount++; score+=20; feedback.innerHTML=`<div class="result good">✅ 正確！</div>`; recBtn.disabled=true; }
-    else feedback.innerHTML=`<div class="result bad">❌ 錯誤! 剩餘次數: ${trialsLeft}</div>`;
+    if(isCorrect){
+      correctCount++; score+=20;
+      feedback.innerHTML=`<div class="result good">✅ 正確！</div>`;
+      recBtn.disabled=true;
+    } else {
+      feedback.innerHTML=`<div class="result bad">❌ 錯誤! 剩餘次數: ${trialsLeft}</div>`;
+      if(trialsLeft>0){
+        // 答錯自動再唸一次英文題目
+        setTimeout(()=>speakWord(qa[idx].answer),500);
+      } else {
+        recBtn.disabled=true;
+      }
+    }
     updateStats();
-    if(trialsLeft===0 && !isCorrect) recBtn.disabled=true;
   });
 
   recognition.addEventListener('end', ()=>{
@@ -158,7 +170,6 @@ nextBtn.addEventListener('click', ()=>{
   }
 });
 
-// 排行榜
 function saveRank(name,sc,t){
   const recs=JSON.parse(localStorage.getItem('speaking_rank')||'[]');
   recs.push({name,sc,t,date:new Date().toLocaleString()});
@@ -183,7 +194,6 @@ function finishChallenge(){
   showQuestion();
 }
 
-// 排行榜收合
 toggleRank.addEventListener('click', ()=>{rankBoard.classList.toggle('collapsed');});
 renderRank();
 </script>
