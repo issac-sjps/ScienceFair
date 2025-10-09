@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>口說挑戰</title>
+<title>拼字挑戰 - 發音版</title>
 <style>
 body{
   margin:0;
@@ -44,7 +44,6 @@ body{
   display:flex;
   justify-content:space-between;
   align-items:center;
-  cursor:pointer;
 }
 #rankList{
   list-style:none;
@@ -71,11 +70,35 @@ main{
   font-size:20px;
   color:#94a3b8;
 }
-.button-group{
+#letterBank{
   display:flex;
-  gap:16px;
-  justify-content:center;
   flex-wrap:wrap;
+  justify-content:center;
+  gap:8px;
+  margin:8px 0;
+}
+.letter{
+  padding:10px 14px;
+  background:linear-gradient(90deg,#6366f1,#a78bfa);
+  border-radius:8px;
+  cursor:pointer;
+  user-select:none;
+  font-size:20px;
+  font-weight:bold;
+}
+#answerArea{
+  min-height:40px;
+  margin:12px 0;
+  display:flex;
+  justify-content:center;
+  gap:8px;
+}
+.ansLetter{
+  padding:8px 12px;
+  background:rgba(255,255,255,0.1);
+  border-radius:6px;
+  font-size:20px;
+  font-weight:bold;
 }
 button{
   padding:10px 20px;
@@ -116,7 +139,7 @@ footer{
 <body>
 
 <div class="header-block">
-<h1>新莊國小口說挑戰</h1>
+<h1>拼字挑戰 - 發音版</h1>
 <div class="stats">分數：<span id="score">0</span> | 答對率：<span id="accuracy">0</span>% | 時間：<span id="timer">0</span>s</div>
 <div id="rankBoard">
 <h3>🏆 排行榜</h3>
@@ -126,17 +149,18 @@ footer{
 
 <main>
 <div id="clue">請按「開始挑戰」</div>
+<div id="letterBank"></div>
+<div id="answerArea"></div>
 <div class="button-group">
 <button id="startBtn">開始挑戰</button>
-<button id="recBtn">按下說話</button>
+<button id="submitBtn">提交答案</button>
 <button id="nextBtn">下一題</button>
 <button id="playRef">播放單字</button>
 </div>
 <div id="feedback"></div>
-<div id="userSpeech"></div>
 </main>
 
-<footer>⏱️ 口說挑戰 — iPad 全螢幕</footer>
+<footer>⏱️ 拼字挑戰 — iPad 全螢幕</footer>
 
 <script>
 const qa=[
@@ -147,85 +171,34 @@ const qa=[
   {prompt:'拉在一起', answer:'pull together'}
 ];
 
-let idx=0,score=0,totalCount=0,correctCount=0,isRecording=false,trialsLeft=5,startTime=0;
+let idx=0,score=0,totalCount=0,correctCount=0,startTime=0;
 const scoreEl=document.getElementById('score');
 const accuracyEl=document.getElementById('accuracy');
 const timerEl=document.getElementById('timer');
 const clue=document.getElementById('clue');
+const letterBank=document.getElementById('letterBank');
+const answerArea=document.getElementById('answerArea');
 const feedback=document.getElementById('feedback');
-const userSpeech=document.getElementById('userSpeech');
-const recBtn=document.getElementById('recBtn');
 const startBtn=document.getElementById('startBtn');
+const submitBtn=document.getElementById('submitBtn');
 const nextBtn=document.getElementById('nextBtn');
 const playRef=document.getElementById('playRef');
 const rankList=document.getElementById('rankList');
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-let recognition=null;
 let timerInterval=null;
 
-if(SpeechRecognition){
-  recognition=new SpeechRecognition();
-  recognition.lang='en-US';
-  recognition.interimResults=false;
-  recognition.maxAlternatives=1;
-
-  recognition.addEventListener('result', e=>{
-    const txt=e.results[0][0].transcript.trim();
-    const ref=qa[idx].answer.toLowerCase().replace(/ /g,'');
-    const userInput=txt.toLowerCase().replace(/ /g,'');
-
-    // 顯示系統偵測文字
-    userSpeech.innerHTML=`你唸出來聽起來像: <strong>${txt}</strong>`;
-
-    let isCorrect = userInput===ref;
-    totalCount++;
-    trialsLeft--;
-    if(isCorrect){
-      correctCount++; score+=20;
-      feedback.innerHTML=`<div class="result good">✅ 正確！</div>`;
-      recBtn.disabled=true;
-    } else {
-      feedback.innerHTML=`<div class="result bad">❌ 錯誤! 剩餘次數: ${trialsLeft}</div>`;
-      if(trialsLeft>0){
-        setTimeout(()=>speakWord(qa[idx].answer),500);
-      } else {
-        recBtn.disabled=true;
-      }
-    }
-    updateStats();
-  });
-
-  recognition.addEventListener('end', ()=>{
-    isRecording=false;
-    recBtn.textContent='按下說話';
-  });
-
-  recognition.addEventListener('error', e=>{
-    console.error(e);
-    feedback.innerHTML='⚠️ 語音辨識失敗，請再試一次';
-    isRecording=false;
-    recBtn.textContent='按下說話';
-  });
-}else{
-  recBtn.disabled=true;
-  recBtn.textContent='此瀏覽器不支援語音辨識';
+function shuffle(str){
+  let arr=str.split('');
+  for(let i=arr.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
 }
 
 function updateStats(){
   scoreEl.textContent=score;
   const rate=Math.floor(totalCount>0? (correctCount/totalCount*100):0);
   accuracyEl.textContent=rate;
-}
-
-function showQuestion(){
-  const q=qa[idx];
-  trialsLeft=5;
-  feedback.innerHTML='';
-  userSpeech.innerHTML='';
-  recBtn.disabled=false;
-  clue.innerHTML=`<div><strong>中文題是:</strong> ${q.prompt}</div>
-                  <div><strong>英文題是:</strong> ${q.answer}</div>`;
-  speakWord(q.answer);
 }
 
 function speakWord(text){
@@ -237,23 +210,42 @@ function speakWord(text){
   }
 }
 
-startBtn.addEventListener('click', ()=>{
-  idx=0; score=0; totalCount=0; correctCount=0; startTime=Date.now();
-  updateStats();
-  showQuestion();
-  clearInterval(timerInterval);
-  timerInterval=setInterval(()=>{ timerEl.textContent=Math.floor((Date.now()-startTime)/1000); },1000);
-});
+function renderQuestion(){
+  const q=qa[idx];
+  feedback.innerHTML='';
+  answerArea.innerHTML='';
+  clue.innerHTML=`<div><strong>中文題是:</strong> ${q.prompt}</div>
+                  <div><strong>英文題是:</strong> ${q.answer}</div>`;
+  speakWord(q.answer); // 開始時自動唸一次
+  const letters = shuffle(q.answer.replace(/ /g,''));
+  letterBank.innerHTML='';
+  letters.forEach(l=>{
+    const btn=document.createElement('div');
+    btn.className='letter';
+    btn.textContent=l;
+    btn.addEventListener('click', ()=>{
+      const ansDiv=document.createElement('div');
+      ansDiv.className='ansLetter';
+      ansDiv.textContent=l;
+      answerArea.appendChild(ansDiv);
+      btn.style.visibility='hidden';
+    });
+    letterBank.appendChild(btn);
+  });
+}
 
-recBtn.addEventListener('click', ()=>{
-  if(!recognition) return;
-  if(!isRecording){
-    recognition.start();
-    isRecording=true;
-    recBtn.textContent='錄音中...再按一次停止';
+submitBtn.addEventListener('click', ()=>{
+  const userAns=Array.from(answerArea.children).map(d=>d.textContent).join('');
+  const ref=qa[idx].answer.replace(/ /g,'');
+  totalCount++;
+  if(userAns===ref){
+    correctCount++;
+    score+=20;
+    feedback.innerHTML='<div class="result good">✅ 正確！</div>';
   } else {
-    recognition.stop();
+    feedback.innerHTML=`<div class="result bad">❌ 錯誤！正確答案: ${qa[idx].answer}</div>`;
   }
+  updateStats();
 });
 
 nextBtn.addEventListener('click', ()=>{
@@ -261,22 +253,30 @@ nextBtn.addEventListener('click', ()=>{
   if(idx>=qa.length){
     finishChallenge();
   } else {
-    showQuestion();
+    renderQuestion();
   }
+});
+
+startBtn.addEventListener('click', ()=>{
+  idx=0; score=0; totalCount=0; correctCount=0; startTime=Date.now();
+  updateStats();
+  renderQuestion();
+  clearInterval(timerInterval);
+  timerInterval=setInterval(()=>{ timerEl.textContent=Math.floor((Date.now()-startTime)/1000); },1000);
 });
 
 playRef.addEventListener('click', ()=>{ speakWord(qa[idx].answer); });
 
 function saveRank(name,sc,t){
-  const recs=JSON.parse(localStorage.getItem('speaking_rank')||'[]');
+  const recs=JSON.parse(localStorage.getItem('spelling_rank')||'[]');
   recs.push({name,sc,t,date:new Date().toLocaleString()});
   recs.sort((a,b)=>b.sc-a.sc || a.t-b.t);
-  localStorage.setItem('speaking_rank',JSON.stringify(recs.slice(0,15)));
+  localStorage.setItem('spelling_rank',JSON.stringify(recs.slice(0,15)));
   renderRank();
 }
 
 function renderRank(){
-  const recs=JSON.parse(localStorage.getItem('speaking_rank')||'[]');
+  const recs=JSON.parse(localStorage.getItem('spelling_rank')||'[]');
   rankList.innerHTML=recs.map((r,i)=>`<li>No.${i+1} ${r.name}: ${r.sc}分 / ${r.t}s</li>`).join('');
 }
 
@@ -288,7 +288,7 @@ function finishChallenge(){
   idx=0; score=0; totalCount=0; correctCount=0;
   timerEl.textContent=0;
   updateStats();
-  showQuestion();
+  renderQuestion();
 }
 
 renderRank();
